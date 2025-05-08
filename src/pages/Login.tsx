@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
+import Card from '../components/ui/Card';
 
-const Login = () => {
+const Login = (): JSX.Element => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +18,7 @@ const Login = () => {
     
     try {
       // This is a placeholder - implement actual login logic
-      console.log('Login attempt with:', email);
+      await signIn(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError('Failed to sign in');
@@ -55,9 +54,13 @@ const Login = () => {
               required
             />
           </div>
-          <Button type="submit" disabled={loading} className="w-full">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-[#7D2027] text-white py-2 px-4 rounded hover:bg-[#6a1b21]"
+          >
             {loading ? 'Signing in...' : 'Sign In'}
-          </Button>
+          </button>
         </form>
       </Card>
     </div>
