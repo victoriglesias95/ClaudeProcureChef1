@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
-import ProtectedRoute from './components/layout/ProtectedRoute';
+import ProtectedRoute from '@/components/layout/ProtectedRoute';
 
 function App() {
   return (

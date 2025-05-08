@@ -42,7 +42,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
   
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Product Image */}
       <div className="relative h-36 bg-gray-100">
         {imageUrl ? (
@@ -54,7 +54,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
         
         {/* Quantity Controls */}
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 z-10">
           {quantity > 0 ? (
             <div className="flex items-center bg-white rounded-full shadow">
               <button 
@@ -63,7 +63,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               >
                 -
               </button>
-              <span className="w-8 text-center">{quantity}</span>
+              <span className="w-8 text-center font-medium">{quantity}</span>
               <button 
                 onClick={handleIncrement}
                 className="w-8 h-8 flex items-center justify-center text-white bg-green-500 rounded-full"

@@ -1,24 +1,36 @@
 import { useState, useEffect } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
+import SearchBar from '../components/ui/SearchBar';
+import CategoryChip from '../components/ui/CategoryChip';
+import CategoryBrowser from '../components/ui/CategoryBrowser';
+import ProductCard from '../components/ui/ProductCard';
+import CartButton from '../components/ui/CartButton';
+import SectionHeader from '../components/ui/SectionHeader';
 import { getProductsByCategory } from '../services/products';
-import { InventoryItem, ProductCategory } from '../types/product';
+import type { InventoryItem } from '../types/product';
+import { ProductCategory } from '../types/product';
+import { mockCategoryPrices } from '../mocks/data';
 
 const Inventory = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<Map<string, {quantity: number, price: number, name: string}>>(new Map());
 
   useEffect(() => {
     async function loadInventory() {
       try {
+        console.log("Loading inventory data...");
         const groupedProducts = await getProductsByCategory();
+        console.log("Loaded products:", groupedProducts);
+        
         const categoryList = Object.keys(groupedProducts).map(name => ({
           name,
           items: groupedProducts[name]
         }));
+        
         setCategories(categoryList);
         
         // Set first category as active if there are categories
@@ -47,115 +59,132 @@ const Inventory = () => {
   const activeItems = activeCategory 
     ? categories.find(c => c.name === activeCategory)?.items || []
     : [];
-
-  const getStockLevelClass = (level: string) => {
-    switch (level) {
-      case 'low': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+    
+  const handleAddToRequest = (productId: string, quantity: number) => {
+    const newCartItems = new Map(cartItems);
+    
+    // Find the product from the categories
+    let product: InventoryItem | undefined;
+    for (const category of categories) {
+      product = category.items.find(item => item.id === productId);
+      if (product) break;
     }
+    
+    if (!product) return;
+    
+    if (quantity === 0) {
+      newCartItems.delete(productId);
+    } else {
+      // Use the category to get the mock price
+      const categoryName = product.category;
+      const { price } = mockCategoryPrices[categoryName] || { price: 10.99 };
+      
+      newCartItems.set(productId, {
+        quantity,
+        price,
+        name: product.name
+      });
+    }
+    
+    setCartItems(newCartItems);
+  };
+  
+  const totalItems = [...cartItems.values()].reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = [...cartItems.values()].reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const handleCreateRequest = () => {
+    // Here you would implement the logic to create a request
+    console.log('Creating request with items:', cartItems);
+    alert(`Creating request with ${totalItems} items totaling R$${totalPrice.toFixed(2)}`);
   };
 
   return (
     <MainLayout>
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
-          <p className="text-gray-600">Manage your ingredients and supplies</p>
-        </div>
-        <Button>Create Request</Button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
+        <p className="text-gray-600">Find and request ingredients</p>
       </div>
       
-      {/* Search and filters */}
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="Search inventory..."
+      {/* Search Bar */}
+      <div className="mb-6 flex gap-2">
+        <SearchBar 
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-2 border rounded"
+          onChange={setSearchTerm}
+          placeholder="Search ingredients..."
+          className="flex-1"
         />
+        <button 
+          className="p-3 rounded-full border border-gray-200 hover:bg-gray-50"
+          onClick={() => setIsCategoryModalOpen(true)}
+        >
+          <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+      
+      {/* Category chips */}
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+        {filteredCategories.map(category => (
+          <CategoryChip
+            key={category.name}
+            name={category.name}
+            isActive={activeCategory === category.name}
+            onClick={() => setActiveCategory(category.name)}
+          />
+        ))}
       </div>
       
       {loading ? (
         <div className="text-center py-8">Loading inventory...</div>
       ) : (
-        <div className="flex gap-6">
-          {/* Category sidebar */}
-          <div className="w-64 shrink-0 hidden md:block">
-            <Card>
-              <CardHeader>
-                <CardTitle>Categories</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {filteredCategories.map(category => (
-                    <button
-                      key={category.name}
-                      className={`block w-full text-left px-4 py-2 hover:bg-gray-50 ${
-                        activeCategory === category.name ? 'bg-gray-100' : ''
-                      }`}
-                      onClick={() => setActiveCategory(category.name)}
-                    >
-                      {category.name} ({category.items.length})
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div>
+          {/* Section header */}
+          <SectionHeader 
+            title={activeCategory || 'All Products'} 
+            onViewMore={() => console.log('View more products')}
+          />
           
           {/* Product grid */}
-          <div className="flex-1">
-            <Card>
-              <CardHeader className="flex-row flex justify-between items-center">
-                <CardTitle>{activeCategory || 'All Categories'}</CardTitle>
-                <div className="text-sm text-gray-500">
-                  {activeItems.length} items
-                </div>
-              </CardHeader>
-              <CardContent>
-                {activeItems.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No items found
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {activeItems.map((item) => (
-                      <Card key={item.id} className="overflow-hidden">
-                        <div className="p-4">
-                          <h3 className="font-medium">{item.name}</h3>
-                          <div className="text-sm text-gray-500 mb-2">
-                            {item.default_unit}
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span 
-                              className={`text-xs px-2 py-1 rounded-full ${getStockLevelClass(item.stock_level)}`}
-                            >
-                              {item.stock_level.toUpperCase()}
-                            </span>
-                            <div className="text-sm">
-                              Stock: {item.current_stock}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 p-2 flex justify-end">
-                          <button 
-                            className="text-primary text-sm hover:underline"
-                          >
-                            Add to Request
-                          </button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {activeItems.map((item) => {
+              // Get price info based on category
+              const categoryName = item.category;
+              const priceInfo = mockCategoryPrices[categoryName] || { price: 12.99 };
+              
+              return (
+                <ProductCard
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  price={priceInfo.price}
+                  originalPrice={item.stock_level === 'low' ? priceInfo.originalPrice : undefined}
+                  unit={`${item.default_unit}`}
+                  onAddToRequest={(id, quantity) => handleAddToRequest(id, quantity)}
+                />
+              );
+            })}
           </div>
         </div>
       )}
+      
+      {/* Cart summary button */}
+      {totalItems > 0 && (
+        <CartButton
+          totalItems={totalItems}
+          totalPrice={totalPrice}
+          onClick={handleCreateRequest}
+        />
+      )}
+      
+      {/* Category browser modal */}
+      <CategoryBrowser
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categories={categories.map(cat => ({ id: cat.name, name: cat.name }))}
+        onSelectCategory={(catId) => setActiveCategory(catId)}
+        title="Food Categories"
+      />
     </MainLayout>
   );
 };
