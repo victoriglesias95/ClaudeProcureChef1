@@ -19,7 +19,7 @@ const Login = (): JSX.Element => {
     try {
       // This is a placeholder - implement actual login logic
       await signIn(email, password);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError('Failed to sign in');
       console.error(err);
