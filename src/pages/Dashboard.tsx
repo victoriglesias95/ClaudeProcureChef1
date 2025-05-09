@@ -1,9 +1,24 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  
+  const handleViewRequests = () => {
+    navigate('/requests');
+  };
+  
+  const handleViewQuotes = () => {
+    navigate('/quotes');
+  };
+  
+  const handleViewOrders = () => {
+    navigate('/orders');
+  };
+
   return (
     <MainLayout>
       <div className="mb-6">
@@ -19,7 +34,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-3xl font-bold text-primary">5</div>
             <div className="mt-4">
-              <Button size="sm">View Requests</Button>
+              <Button size="sm" onClick={handleViewRequests}>View Requests</Button>
             </div>
           </CardContent>
         </Card>
@@ -31,7 +46,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-3xl font-bold text-primary">12</div>
             <div className="mt-4">
-              <Button size="sm">View Quotes</Button>
+              <Button size="sm" onClick={handleViewQuotes}>View Quotes</Button>
             </div>
           </CardContent>
         </Card>
@@ -43,7 +58,7 @@ const Dashboard = () => {
           <CardContent>
             <div className="text-3xl font-bold text-primary">3</div>
             <div className="mt-4">
-              <Button size="sm">View Orders</Button>
+              <Button size="sm" onClick={handleViewOrders}>View Orders</Button>
             </div>
           </CardContent>
         </Card>

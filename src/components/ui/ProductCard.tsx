@@ -7,6 +7,9 @@ interface ProductCardProps {
   originalPrice?: number;
   unit: string;
   imageUrl?: string;
+  stockLevel?: 'low' | 'medium' | 'high';
+  currentStock?: number;
+  lastCountedAt?: string;
   onAddToRequest?: (id: string, quantity: number) => void;
 }
 
@@ -17,6 +20,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   originalPrice,
   unit,
   imageUrl,
+  stockLevel = 'medium',
+  currentStock,
+  lastCountedAt,
   onAddToRequest
 }) => {
   const [quantity, setQuantity] = useState(0);
@@ -39,6 +45,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
         onAddToRequest(id, newQuantity);
       }
     }
+  };
+
+  // Get color for stock level
+  const getStockColor = () => {
+    switch (stockLevel) {
+      case 'low': return 'text-red-600';
+      case 'medium': return 'text-yellow-600';
+      case 'high': return 'text-green-600';
+      default: return 'text-gray-600';
+    }
+  };
+  
+  // Format date helper
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Never';
+    return new Date(dateString).toLocaleDateString();
   };
   
   return (
@@ -81,9 +103,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
         
+        {/* Stock Level Badge */}
+        <div className="absolute bottom-2 left-2">
+          <div className={`text-xs font-bold px-2 py-1 ${getStockColor()} bg-white bg-opacity-90 rounded`}>
+            {currentStock !== undefined ? `${currentStock} ${unit}` : stockLevel.toUpperCase()}
+          </div>
+        </div>
+        
         {/* Discount Badge */}
         {discountPercentage > 0 && (
-          <div className="absolute bottom-2 left-2">
+          <div className="absolute bottom-2 right-2">
             <div className="bg-yellow-400 text-xs font-bold px-2 py-1">
               -{discountPercentage}%
             </div>
@@ -107,6 +136,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="text-sm text-gray-500">
           {unit}
         </div>
+        {lastCountedAt && (
+          <div className="text-xs text-gray-400 mt-1">
+            Last counted: {formatDate(lastCountedAt)}
+          </div>
+        )}
       </div>
     </div>
   );

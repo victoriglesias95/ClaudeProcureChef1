@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
+import Requests from './pages/Requests';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
+          <Route path="/requests" element={<Requests />} />
           {/* Add more routes here */}
         </Route>
         

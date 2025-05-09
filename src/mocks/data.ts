@@ -117,6 +117,14 @@ export function getRandomStockLevel(): 'low' | 'medium' | 'high' {
   return levels[Math.floor(Math.random() * levels.length)];
 }
 
+// Helper to generate random past date within the last 30 days
+export function getRandomPastDate(): string {
+  const now = new Date();
+  const daysAgo = Math.floor(Math.random() * 30);
+  now.setDate(now.getDate() - daysAgo);
+  return now.toISOString();
+}
+
 // Helper to generate inventory items with mock stock levels
 export function generateMockInventoryItems(products: Product[]): InventoryItem[] {
   return products.map(product => ({
@@ -124,5 +132,6 @@ export function generateMockInventoryItems(products: Product[]): InventoryItem[]
     stock_level: getRandomStockLevel(),
     current_stock: Math.floor(Math.random() * 100),
     last_updated: new Date().toISOString(),
+    last_counted_at: Math.random() > 0.3 ? getRandomPastDate() : undefined, // 70% have been counted
   }));
 }

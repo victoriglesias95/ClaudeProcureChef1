@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { Product, InventoryItem } from '../types/product';
 import { mockProducts, generateMockInventoryItems } from '../mocks/data';
+import { getUpdatedInventory } from './inventory';
 
 // Environment configuration
 const USE_MOCK_DATA = true; // Set to false to use real database when ready
@@ -36,7 +37,17 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
   const products = await getProducts();
   
   if (USE_MOCK_DATA) {
-    // Generate mock inventory data
+    // Use the latest mock inventory data from inventory service
+    try {
+      const updatedInventory = await getUpdatedInventory();
+      if (updatedInventory.length > 0) {
+        return updatedInventory;
+      }
+    } catch (error) {
+      console.error('Error getting updated inventory, falling back to generated mocks:', error);
+    }
+    
+    // Generate mock inventory data if no updated data
     return generateMockInventoryItems(products);
   }
   

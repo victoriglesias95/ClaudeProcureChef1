@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import MainLayout from '../components/layout/MainLayout';
 import SearchBar from '../components/ui/SearchBar';
 import CategoryChip from '../components/ui/CategoryChip';
@@ -6,7 +7,11 @@ import CategoryBrowser from '../components/ui/CategoryBrowser';
 import ProductCard from '../components/ui/ProductCard';
 import CartButton from '../components/ui/CartButton';
 import SectionHeader from '../components/ui/SectionHeader';
+import Button from '../components/ui/Button';
+import RequestSubmissionModal from '../components/requests/RequestSubmissionModal';
+import CountModal from '../components/inventory/CountModal';
 import { getProductsByCategory } from '../services/products';
+import { updateInventoryCount } from '../services/inventory';
 import type { InventoryItem } from '../types/product';
 import { ProductCategory } from '../types/product';
 import { mockCategoryPrices } from '../mocks/data';
@@ -17,34 +22,43 @@ const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<Map<string, {quantity: number, price: number, name: string}>>(new Map());
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isCountModalOpen, setIsCountModalOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<Map<string, {
+    quantity: number, 
+    price: number, 
+    name: string,
+    currentStock?: number,
+    stockLevel?: 'low' | 'medium' | 'high'
+  }>>(new Map());
+
+  const loadInventoryData = async () => {
+    try {
+      console.log("Loading inventory data...");
+      const groupedProducts = await getProductsByCategory();
+      console.log("Loaded products:", groupedProducts);
+      
+      const categoryList = Object.keys(groupedProducts).map(name => ({
+        name,
+        items: groupedProducts[name]
+      }));
+      
+      setCategories(categoryList);
+      
+      // Set first category as active if there are categories
+      if (categoryList.length > 0 && !activeCategory) {
+        setActiveCategory(categoryList[0].name);
+      }
+    } catch (error) {
+      console.error('Failed to load inventory:', error);
+      toast.error('Failed to load inventory items');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadInventory() {
-      try {
-        console.log("Loading inventory data...");
-        const groupedProducts = await getProductsByCategory();
-        console.log("Loaded products:", groupedProducts);
-        
-        const categoryList = Object.keys(groupedProducts).map(name => ({
-          name,
-          items: groupedProducts[name]
-        }));
-        
-        setCategories(categoryList);
-        
-        // Set first category as active if there are categories
-        if (categoryList.length > 0) {
-          setActiveCategory(categoryList[0].name);
-        }
-      } catch (error) {
-        console.error('Failed to load inventory:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    loadInventory();
+    loadInventoryData();
   }, []);
 
   // Filter products based on search term
@@ -82,7 +96,9 @@ const Inventory = () => {
       newCartItems.set(productId, {
         quantity,
         price,
-        name: product.name
+        name: product.name,
+        currentStock: product.current_stock,
+        stockLevel: product.stock_level
       });
     }
     
@@ -93,16 +109,44 @@ const Inventory = () => {
   const totalPrice = [...cartItems.values()].reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handleCreateRequest = () => {
-    // Here you would implement the logic to create a request
-    console.log('Creating request with items:', cartItems);
-    alert(`Creating request with ${totalItems} items totaling R$${totalPrice.toFixed(2)}`);
+    // Open the request submission modal
+    setIsRequestModalOpen(true);
+  };
+  
+  const handleRequestSubmitted = () => {
+    // Clear the cart after successful submission
+    setCartItems(new Map());
+  };
+
+  const handleStartCount = () => {
+    setIsCountModalOpen(true);
+  };
+  
+  const handleSubmitCount = async (counts: Record<string, number>) => {
+    try {
+      await updateInventoryCount(counts);
+      // Reload inventory data after count is updated
+      await loadInventoryData();
+      toast.success('Inventory count updated successfully');
+    } catch (error) {
+      console.error('Error updating inventory count:', error);
+      toast.error('Failed to update inventory count');
+    }
   };
 
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
-        <p className="text-gray-600">Find and request ingredients</p>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
+          <p className="text-gray-600">Find and request ingredients</p>
+        </div>
+        <Button 
+          variant="primary"
+          onClick={handleStartCount}
+        >
+          Start Count
+        </Button>
       </div>
       
       {/* Search Bar */}
@@ -160,6 +204,9 @@ const Inventory = () => {
                   price={priceInfo.price}
                   originalPrice={item.stock_level === 'low' ? priceInfo.originalPrice : undefined}
                   unit={`${item.default_unit}`}
+                  stockLevel={item.stock_level}
+                  currentStock={item.current_stock}
+                  lastCountedAt={item.last_counted_at}
                   onAddToRequest={(id, quantity) => handleAddToRequest(id, quantity)}
                 />
               );
@@ -184,6 +231,30 @@ const Inventory = () => {
         categories={categories.map(cat => ({ id: cat.name, name: cat.name }))}
         onSelectCategory={(catId) => setActiveCategory(catId)}
         title="Food Categories"
+      />
+      
+      {/* Request submission modal */}
+      <RequestSubmissionModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        items={cartItems}
+        totalAmount={totalPrice}
+        onRequestSubmitted={handleRequestSubmitted}
+      />
+      
+      {/* Inventory count modal */}
+      <CountModal
+        isOpen={isCountModalOpen}
+        onClose={() => setIsCountModalOpen(false)}
+        items={activeItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          currentStock: item.current_stock,
+          unit: item.default_unit,
+          lastCountedAt: item.last_counted_at
+        }))}
+        category={activeCategory || undefined}
+        onSubmitCount={handleSubmitCount}
       />
     </MainLayout>
   );

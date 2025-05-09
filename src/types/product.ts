@@ -11,6 +11,7 @@ export type Product = {
     stock_level: 'low' | 'medium' | 'high';
     current_stock: number;
     last_updated: string;
+    last_counted_at?: string; // Added this field
   };
   
   export type ProductCategory = {
