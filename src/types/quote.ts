@@ -1,4 +1,4 @@
-// src/types/quote.ts
+// Types for procurement system with ERP integration support
 
 import { RequestItem, RequestPriority, RequestStatus } from './request';
 
@@ -38,6 +38,8 @@ export type SupplierQuote = {
   items: QuoteItem[];
   total_amount: number;
   notes?: string;
+  validity_days?: number;  // Add this
+  is_blanket_quote?: boolean;  // Add this
 };
 
 // For backward compatibility

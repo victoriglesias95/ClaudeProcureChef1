@@ -5,8 +5,14 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import ProductQuoteComparisonTable from '../components/quotes/ProductQuoteComparisonTable';
-import { ProductQuoteComparison } from '../types/quote';
-import { getProductQuoteComparison, getRequests, createOrdersFromProductSelections } from '../services/quotes';
+import { ProductQuoteComparison, SupplierQuote, QuoteItem } from '../types/quote';
+import { 
+  getProductQuoteComparison, 
+  getRequests, 
+  createOrdersFromProductSelections,
+  getQuoteComparisons 
+} from '../services/quotes';
+import { isQuoteValid } from '../utils/quoteUtils';
 
 const ProductQuoteComparisonPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +24,7 @@ const ProductQuoteComparisonPage: React.FC = () => {
   const [requestFilter, setRequestFilter] = useState<string>('');
   const [categories, setCategories] = useState<string[]>([]);
   const [requests, setRequests] = useState<{id: string, title: string}[]>([]);
+  const [existingQuotes, setExistingQuotes] = useState<SupplierQuote[]>([]);
 
   useEffect(() => {
     // Get request IDs from URL params
@@ -35,6 +42,11 @@ const ProductQuoteComparisonPage: React.FC = () => {
         const productData = await getProductQuoteComparison(requestIds);
         setProducts(productData);
         setFilteredProducts(productData);
+        
+        // Load existing quotes
+        const quoteComparisons = await getQuoteComparisons();
+        const allQuotes: SupplierQuote[] = quoteComparisons.flatMap(qc => qc.supplier_quotes);
+        setExistingQuotes(allQuotes);
         
         // Extract categories
         const uniqueCategories = [...new Set(productData.map(p => p.category))];
@@ -116,6 +128,20 @@ const ProductQuoteComparisonPage: React.FC = () => {
     }
   };
   
+  // Calculate summary stats
+  const validQuotesCount = products.reduce((count, product) => {
+    const hasValidQuote = product.supplierQuotes.some(sq => {
+      const quote = existingQuotes.find(q => 
+        q.supplier_id === sq.supplierId &&
+        q.items.some((item: QuoteItem) => item.product_id === product.productId)
+      );
+      return quote && isQuoteValid(quote);
+    });
+    return count + (hasValidQuote ? 1 : 0);
+  }, 0);
+  
+  const needsNewQuotesCount = products.length - validQuotesCount;
+  
   if (loading) {
     return (
       <MainLayout>
@@ -142,6 +168,28 @@ const ProductQuoteComparisonPage: React.FC = () => {
             Generate Orders ({products.filter(p => p.selectedSupplierId).length})
           </Button>
         </div>
+      </div>
+      
+      {/* Quote Status Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-gray-500">Products with Valid Quotes</p>
+            <p className="text-2xl font-bold text-green-600">{validQuotesCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-gray-500">Need New Quotes</p>
+            <p className="text-2xl font-bold text-yellow-600">{needsNewQuotesCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-gray-500">Total Products</p>
+            <p className="text-2xl font-bold text-primary">{products.length}</p>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Filters */}
@@ -198,6 +246,7 @@ const ProductQuoteComparisonPage: React.FC = () => {
               products={filteredProducts}
               onSelectSupplier={handleSelectSupplier}
               onQuantityChange={handleQuantityChange}
+              existingQuotes={existingQuotes}
             />
           )}
         </CardContent>

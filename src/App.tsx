@@ -6,6 +6,9 @@ import Inventory from './pages/Inventory';
 import Requests from './pages/Requests';
 import Quotes from './pages/Quotes';
 import ProductQuoteComparison from './pages/ProductQuoteComparison';
+import Orders from './pages/Orders';
+import Suppliers from './pages/Suppliers';
+import RequestDetails from './pages/RequestDetails';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
@@ -25,6 +28,9 @@ function App() {
           <Route path="/requests" element={<Requests />} />
           <Route path="/quotes" element={<Quotes />} />
           <Route path="/quote-comparison" element={<ProductQuoteComparison />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/requests/:id" element={<RequestDetails />} />
           {/* Add more routes here */}
         </Route>
         

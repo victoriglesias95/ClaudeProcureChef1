@@ -157,9 +157,12 @@ export function generateMockQuotes(requestId: string) {
         so => so.supplier_id === supplier.id
       );
       
-      // If supplier doesn't offer this product, generate a random price
-      const price = supplierOffering?.price || 
-        Number((Math.random() * 20 + 5).toFixed(2));
+      // If supplier doesn't offer this product, mark as unavailable
+      if (!supplierOffering || !supplierOffering.available) {
+        return null;
+      }
+      
+      const price = supplierOffering.price;
       
       return {
         id: `qitem_${supplier.id}_${item.id}`,
@@ -169,14 +172,27 @@ export function generateMockQuotes(requestId: string) {
         quantity: item.quantity,
         unit: item.unit,
         price_per_unit: price,
-        in_stock: Math.random() > 0.2
+        in_stock: Math.random() > 0.2,
+        supplier_product_code: supplierOffering.supplier_product_code,
       };
-    });
+    }).filter(item => item !== null);
     
     const totalAmount = quoteItems.reduce(
       (sum, item) => sum + (item.price_per_unit * item.quantity),
       0
     );
+    
+    // Generate different expiry dates for variety
+    const now = new Date();
+    const validityDays = [7, 14, 30, 60][Math.floor(Math.random() * 4)];
+    const expiryDate = new Date(now);
+    expiryDate.setDate(expiryDate.getDate() + validityDays);
+    
+    // Some quotes are already expired for testing
+    const isExpired = Math.random() > 0.7;
+    if (isExpired) {
+      expiryDate.setDate(now.getDate() - Math.floor(Math.random() * 30));
+    }
     
     return {
       id: `quote_${supplier.id}_${request.id}`,
@@ -184,11 +200,47 @@ export function generateMockQuotes(requestId: string) {
       supplier_name: supplier.name,
       request_id: request.id,
       created_at: new Date().toISOString(),
-      expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      expiry_date: expiryDate.toISOString(),
       status: 'received',
-      delivery_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+      delivery_date: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString(),
       items: quoteItems,
-      total_amount: Number(totalAmount.toFixed(2))
+      total_amount: Number(totalAmount.toFixed(2)),
+      validity_days: validityDays,
+      is_blanket_quote: Math.random() > 0.8 // 20% are blanket quotes
     };
   });
 }
+
+// Add quote history for existing products
+export const mockQuoteHistory = {
+  getQuoteHistory: (productId: string, supplierId: string) => {
+    const history = [];
+    const now = new Date();
+    
+    // Generate 3-5 historical quotes
+    const count = Math.floor(Math.random() * 3) + 3;
+    for (let i = 0; i < count; i++) {
+      const daysAgo = (i + 1) * 30;
+      const createdDate = new Date(now);
+      createdDate.setDate(createdDate.getDate() - daysAgo);
+      
+      const expiryDate = new Date(createdDate);
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      
+      const basePrice = 10 + Math.random() * 20;
+      const price = basePrice * (1 + (Math.random() - 0.5) * 0.3); // ±15% variation
+      
+      history.push({
+        id: `hist_${i}`,
+        created_at: createdDate.toISOString(),
+        expiry_date: expiryDate.toISOString(),
+        price: Number(price.toFixed(2)),
+        status: now > expiryDate ? 'expired' : 'valid'
+      });
+    }
+    
+    return history.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
+};

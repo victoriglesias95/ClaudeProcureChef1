@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../ui/Card';
 import StatusBadge from '../ui/StatusBadge';
 import Button from '../ui/Button';
@@ -7,13 +8,27 @@ import { Request } from '../../types/request';
 interface RequestCardProps {
   request: Request;
   onViewDetails?: (requestId: string) => void;
+  onCreateQuote?: (requestId: string) => void;
 }
 
-const RequestCard: React.FC<RequestCardProps> = ({ request, onViewDetails }) => {
+const RequestCard: React.FC<RequestCardProps> = ({ 
+  request, 
+  onViewDetails,
+  onCreateQuote 
+}) => {
+  const navigate = useNavigate();
+  
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
+  };
+
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails(request.id);
+    }
+    navigate(`/requests/${request.id}`);
   };
 
   return (
@@ -49,13 +64,23 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onViewDetails }) => 
               <span>{formatDate(request.needed_by)}</span>
             </div>
           )}
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-end space-x-2">
             <Button 
               size="sm" 
-              onClick={() => onViewDetails && onViewDetails(request.id)}
+              variant="outline"
+              onClick={handleViewDetails}
             >
               View Details
             </Button>
+            {request.status === 'approved' && onCreateQuote && (
+              <Button 
+                size="sm" 
+                variant="primary"
+                onClick={() => onCreateQuote(request.id)}
+              >
+                Generate Quote
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

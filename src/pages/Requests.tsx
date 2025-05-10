@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import RequestCard from '../components/requests/RequestCard';
-import { getRequests } from '../services/requests';
+import { getRequests, createQuoteComparisonFromRequest } from '../services/quotes';
 import { Request } from '../types/request';
 
 const Requests = () => {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,8 +30,25 @@ const Requests = () => {
   }, []);
 
   const handleViewDetails = (requestId: string) => {
-    // This will be implemented in the future
     console.log('View details for request:', requestId);
+    toast.info('Request details view coming soon!');
+  };
+  
+  const handleNewRequest = () => {
+    // Navigate to inventory to create a new request
+    navigate('/inventory');
+    toast.info('Select items from inventory to create a new request');
+  };
+  
+  const handleCreateQuote = async (requestId: string) => {
+    try {
+      const quoteComparison = await createQuoteComparisonFromRequest(requestId);
+      toast.success('Quote comparison created successfully');
+      navigate(`/quote-comparison?requestIds=${requestId}`);
+    } catch (error) {
+      console.error('Failed to create quote comparison:', error);
+      toast.error('Failed to create quote comparison');
+    }
   };
 
   return (
@@ -39,7 +58,7 @@ const Requests = () => {
           <h1 className="text-2xl font-bold text-gray-900">Requests</h1>
           <p className="text-gray-600">Manage your ingredient requests</p>
         </div>
-        <Button>New Request</Button>
+        <Button onClick={handleNewRequest}>New Request</Button>
       </div>
 
       {loading ? (
@@ -51,7 +70,7 @@ const Requests = () => {
             <p className="text-gray-400 mb-6">
               Start by creating a request from the inventory page
             </p>
-            <Button variant="primary" onClick={() => window.location.href = '/inventory'}>
+            <Button variant="primary" onClick={() => navigate('/inventory')}>
               Go to Inventory
             </Button>
           </CardContent>
@@ -63,6 +82,7 @@ const Requests = () => {
               key={request.id} 
               request={request} 
               onViewDetails={handleViewDetails}
+              onCreateQuote={handleCreateQuote}
             />
           ))}
         </div>

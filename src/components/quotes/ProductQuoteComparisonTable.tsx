@@ -1,16 +1,19 @@
 import React from 'react';
-import { ProductQuoteComparison } from '../../types/quote';
+import { ProductQuoteComparison, QuoteItem, SupplierQuote } from '../../types/quote';
+import { isQuoteValid, getQuoteValidityStatus } from '../../utils/quoteUtils';
 
 interface ProductQuoteComparisonTableProps {
   products: ProductQuoteComparison[];
   onSelectSupplier: (productId: string, supplierId: string) => void;
   onQuantityChange: (productId: string, quantity: number) => void;
+  existingQuotes?: SupplierQuote[]; // Properly type this prop
 }
 
 const ProductQuoteComparisonTable: React.FC<ProductQuoteComparisonTableProps> = ({
   products,
   onSelectSupplier,
-  onQuantityChange
+  onQuantityChange,
+  existingQuotes = []
 }) => {
   // Get the best price for a product
   const getBestPrice = (product: ProductQuoteComparison) => {
@@ -19,6 +22,14 @@ const ProductQuoteComparisonTable: React.FC<ProductQuoteComparisonTableProps> = 
     return product.supplierQuotes.reduce((best, current) => 
       current.price < best.price ? current : best, 
       product.supplierQuotes[0]
+    );
+  };
+  
+  // Check if supplier has a valid existing quote
+  const getExistingQuote = (productId: string, supplierId: string): SupplierQuote | undefined => {
+    return existingQuotes.find(quote => 
+      quote.supplier_id === supplierId &&
+      quote.items.some((item: QuoteItem) => item.product_id === productId)
     );
   };
   
@@ -102,30 +113,47 @@ const ProductQuoteComparisonTable: React.FC<ProductQuoteComparisonTableProps> = 
                     {product.supplierQuotes.map((supplier) => {
                       const isMinOrderReached = !supplier.minimumOrderQuantity || 
                         product.quantity >= supplier.minimumOrderQuantity;
+                      
+                      // Check for existing quote
+                      const existingQuote = getExistingQuote(product.productId, supplier.supplierId);
+                      const quoteStatus = existingQuote ? getQuoteValidityStatus(existingQuote) : null;
+                      const hasValidQuote = existingQuote && isQuoteValid(existingQuote);
                         
                       return (
                         <button
                           key={supplier.supplierId}
                           onClick={() => onSelectSupplier(product.productId, supplier.supplierId)}
-                          className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                          className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                             product.selectedSupplierId === supplier.supplierId
                               ? 'bg-primary text-white'
                               : supplier.price === bestPrice?.price
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                                ? 'bg-green-100 text-green-800 border border-green-200'
+                                : hasValidQuote && quoteStatus
+                                  ? `${quoteStatus.bgColor} ${quoteStatus.color} border`
+                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                           }`}
                           disabled={!supplier.inStock}
-                          title={!supplier.inStock ? 'Out of stock' : ''}
                         >
-                          <div className="flex justify-between items-center">
-                            <span>{supplier.supplierName}: R${supplier.price.toFixed(2)}</span>
-                            {!supplier.inStock && (
-                              <span className="ml-2 text-xs bg-red-100 text-red-800 px-1 rounded">
-                                Out of stock
-                              </span>
+                          <div className="flex flex-col items-start">
+                            <div className="flex justify-between items-center w-full">
+                              <span>{supplier.supplierName}: R${supplier.price.toFixed(2)}</span>
+                              {!supplier.inStock && (
+                                <span className="ml-2 text-xs bg-red-100 text-red-800 px-1 rounded">
+                                  Out of stock
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Quote validity indicator */}
+                            {existingQuote && quoteStatus && (
+                              <div className={`text-xs mt-1 ${quoteStatus.color}`}>
+                                {hasValidQuote ? '✓ ' : '⚠️ '}{quoteStatus.text}
+                                {existingQuote.is_blanket_quote && ' (Blanket)'}
+                              </div>
                             )}
+                            
                             {supplier.minimumOrderQuantity && !isMinOrderReached && (
-                              <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1 rounded">
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded mt-1">
                                 Min: {supplier.minimumOrderQuantity}
                               </span>
                             )}
