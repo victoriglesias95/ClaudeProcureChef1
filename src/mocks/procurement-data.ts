@@ -1,4 +1,5 @@
 import { mockProducts, mockCategoryPrices } from './data';
+import { Request } from '../types/request';
 
 // Comprehensive supplier database
 export const mockSuppliers = [
@@ -143,7 +144,7 @@ export const mockProcurementRequests = [
 ];
 
 // Function to generate quotes based on requests
-export function generateMockQuotes(requestId) {
+export function generateMockQuotes(requestId: string) {
   const request = mockProcurementRequests.find(r => r.id === requestId);
   if (!request) return [];
   
@@ -158,7 +159,7 @@ export function generateMockQuotes(requestId) {
       
       // If supplier doesn't offer this product, generate a random price
       const price = supplierOffering?.price || 
-        (Math.random() * 20 + 5).toFixed(2);
+        Number((Math.random() * 20 + 5).toFixed(2));
       
       return {
         id: `qitem_${supplier.id}_${item.id}`,
@@ -167,10 +168,15 @@ export function generateMockQuotes(requestId) {
         product_name: item.product_name,
         quantity: item.quantity,
         unit: item.unit,
-        price_per_unit: Number(price),
+        price_per_unit: price,
         in_stock: Math.random() > 0.2
       };
     });
+    
+    const totalAmount = quoteItems.reduce(
+      (sum, item) => sum + (item.price_per_unit * item.quantity),
+      0
+    );
     
     return {
       id: `quote_${supplier.id}_${request.id}`,
@@ -182,10 +188,7 @@ export function generateMockQuotes(requestId) {
       status: 'received',
       delivery_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
       items: quoteItems,
-      total_amount: quoteItems.reduce(
-        (sum, item) => sum + (item.price_per_unit * item.quantity),
-        0
-      )
+      total_amount: Number(totalAmount.toFixed(2))
     };
   });
 }
