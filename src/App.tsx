@@ -30,7 +30,7 @@ const AppContent = () => {
   const { isLoading, isAuthenticated } = useAuth();
   
   // Show loading screen only during initial auth check
-  if (isLoading && !isAuthenticated) {
+  if (isLoading) {
     return <LoadingScreen />;
   }
   

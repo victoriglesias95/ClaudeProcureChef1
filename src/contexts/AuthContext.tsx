@@ -78,7 +78,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
             if (userData) {
               console.log("Setting user data:", userData);
               setUser(userData);
-              setIsAuthenticated(true);
+              console.log('Setting isAuthenticated = true');
+    setIsAuthenticated(true);
             } else {
               console.warn("No user data found in the users table");
               // Auto-create a user record if it doesn't exist
@@ -99,7 +100,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
                 } else {
                   console.log("Created missing user record");
                   setUser(newUser as User);
-                  setIsAuthenticated(true);
+                  console.log('Setting isAuthenticated = true');
+    setIsAuthenticated(true);
                 }
               } catch (createError) {
                 console.error("Failed to create user record:", createError);
@@ -146,7 +148,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
           
           if (userData) {
             setUser(userData);
-            setIsAuthenticated(true);
+            console.log('Setting isAuthenticated = true');
+    setIsAuthenticated(true);
           } else {
             console.warn("No user record found for authenticated user");
             // Auto-create a user record if it doesn't exist
@@ -167,7 +170,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
               } else {
                 console.log("Created missing user record");
                 setUser(newUser as User);
-                setIsAuthenticated(true);
+                console.log('Setting isAuthenticated = true');
+    setIsAuthenticated(true);
               }
             } catch (createError) {
               console.error("Failed to create user record:", createError);
@@ -249,7 +253,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
             } else {
               console.log("Created missing user record");
               setUser(newUser as User);
-              setIsAuthenticated(true);
+              console.log('Setting isAuthenticated = true');
+    setIsAuthenticated(true);
             }
           } catch (createError) {
             console.error("Failed to create user record:", createError);
@@ -258,7 +263,8 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         } else if (userData) {
           console.log("User data after sign in:", userData);
           setUser(userData);
-          setIsAuthenticated(true);
+          console.log('Setting isAuthenticated = true');
+    setIsAuthenticated(true);
         }
       }
     } catch (error) {
@@ -302,3 +308,4 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
 };
 
 // Add this for backward compatibility with any code importing the default export
+export default AuthContext;
