@@ -202,3 +202,40 @@ Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 License
 This project is proprietary software.
+
+### Database Setup
+
+1. Navigate to the Admin page `/admin` in the application
+2. Click "Check Connection" to verify Supabase connectivity
+3. Click "Setup Database" to populate initial data
+4. Create a test user with the form provided
+
+## Authentication
+
+The system uses Supabase Authentication with role-based access control:
+
+- **Admin**: Full access to all features
+- **Purchasing**: Access to procurement-related features
+- **Chef**: Limited access to requesting and inventory management
+
+A test user with admin privileges can be created from the Admin page.
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Authentication Loading Issues**: If the app gets stuck on "Loading authentication...", check browser console for errors. The authentication system has a 5-second safety timeout.
+
+2. **Database Connection**: Verify your Supabase credentials in the `.env` file and ensure your Supabase project is active.
+
+3. **Invalid Login Credentials**: Ensure the user exists in both Supabase Auth and the users table.
+
+4. **TypeScript Errors**: If you encounter TypeScript errors, check for proper typing and imports between service files.
+
+5. **Fast Refresh Errors**: If you see "Could not Fast Refresh" errors, ensure consistent export patterns between files.
+
+### Development Tips
+
+- Use the browser console to monitor authentication and data flow
+- The Admin page provides utilities for database management and user creation
+- Mock data is available in development mode if needed
