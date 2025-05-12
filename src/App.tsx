@@ -13,6 +13,7 @@ import QuoteDetails from './pages/QuotesDetails'; // NEW IMPORT
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/requests/:id" element={<RequestDetails />} />
+          <Route path="/admin" element={<Admin />} />
         </Route>
         
         {/* Catch all route */}

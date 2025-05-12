@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../services/supabase';
 
 // Define the User type
 type User = {
@@ -36,37 +37,88 @@ type AuthProviderProps = {
 export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
   // Check for existing session on mount
   useEffect(() => {
-    // This would normally connect to Supabase to check for an active session
     const checkSession = async () => {
-      // Placeholder for actual authentication logic
-      const storedUser = localStorage.getItem('procurechef_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-        setIsAuthenticated(true);
+      try {
+        // Get session from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          // Get user details from users table
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('id, email, role')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) throw error;
+          
+          if (userData) {
+            setUser(userData);
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        setLoading(false);
       }
     };
     
+    const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // Get user details from users table
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('id, email, role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (!error && userData) {
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+    
     checkSession();
+    
+    return () => {
+      authListener.data.subscription.unsubscribe();
+    };
   }, []);
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
-      console.log(`Attempting to sign in with email: ${email} and password length: ${password.length}`);
-      // Placeholder for actual sign-in logic
-      // In a real app, this would verify credentials with Supabase
-      const mockUser = {
-        id: '1',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        role: 'admin' as const // Mock role for testing
-      };
+        password
+      });
       
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      localStorage.setItem('procurechef_user', JSON.stringify(mockUser));
+      if (error) throw error;
+      
+      if (data.user) {
+        // Get user details from users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, email, role')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (userError) throw userError;
+        
+        if (userData) {
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
+      }
     } catch (error) {
       console.error('Sign-in error:', error);
       throw error;
@@ -76,10 +128,9 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   // Sign out function
   const signOut = async () => {
     try {
-      // Placeholder for actual sign-out logic
+      await supabase.auth.signOut();
       setUser(null);
       setIsAuthenticated(false);
-      localStorage.removeItem('procurechef_user');
     } catch (error) {
       console.error('Sign-out error:', error);
       throw error;
@@ -92,6 +143,11 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     signIn,
     signOut
   };
+
+  if (loading) {
+    // You might want to add a loading spinner here
+    return <div>Loading auth...</div>;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

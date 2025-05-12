@@ -3,7 +3,7 @@ import { InventoryItem } from '../types/product';
 import { mockProducts, generateMockInventoryItems } from '../mocks/data';
 
 // Environment configuration
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false; // Set to false to use Supabase
 
 // In-memory mock inventory (since we don't have a persistent mock storage)
 let mockInventory = generateMockInventoryItems(mockProducts);
@@ -29,9 +29,8 @@ export async function updateInventoryCount(counts: Record<string, number>): Prom
   }
   
   try {
-    // With a real database, we would do a batch update
-    // This is just a placeholder for Supabase implementation
-    for (const [id, count] of Object.entries(counts)) {
+    // With Supabase, perform a batch update
+    for (const [productId, count] of Object.entries(counts)) {
       const { error } = await supabase
         .from('inventory')
         .update({ 
@@ -40,7 +39,7 @@ export async function updateInventoryCount(counts: Record<string, number>): Prom
           last_updated: new Date().toISOString(),
           last_counted_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('product_id', productId);
       
       if (error) {
         console.error('Error updating inventory count:', error);
@@ -71,15 +70,36 @@ export async function getUpdatedInventory(): Promise<InventoryItem[]> {
   try {
     const { data, error } = await supabase
       .from('inventory')
-      .select('*')
-      .order('name');
+      .select(`
+        *,
+        product:product_id (
+          id,
+          name,
+          description,
+          category,
+          default_unit,
+          created_at
+        )
+      `);
     
     if (error) {
       console.error('Error fetching inventory:', error);
       return [];
     }
     
-    return data || [];
+    // Transform the joined data to match the InventoryItem type
+    return data.map(item => ({
+      id: item.product.id,
+      name: item.product.name,
+      description: item.product.description,
+      category: item.product.category,
+      default_unit: item.product.default_unit,
+      created_at: item.product.created_at,
+      stock_level: item.stock_level,
+      current_stock: item.current_stock,
+      last_updated: item.last_updated,
+      last_counted_at: item.last_counted_at
+    }));
   } catch (error) {
     console.error('Error fetching inventory:', error);
     return [];

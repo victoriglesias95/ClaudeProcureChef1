@@ -1,26 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Type declaration for Vite environment variables
-interface ImportMetaEnv {
-  VITE_SUPABASE_URL: string;
-  VITE_SUPABASE_ANON_KEY: string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase credentials - check your environment variables');
 }
 
-// Use the interface to type cast import.meta.env
-const env = import.meta.env as ImportMetaEnv;
-
-// Now we can access env variables with proper type checking
-const supabaseUrl = env.VITE_SUPABASE_URL || 'https://example.supabase.co';
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example';
-
-// Create a Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true
   }
 });
 
-// Log if we're using the development database
-if (supabaseUrl === 'https://example.supabase.co') {
-  console.warn('Using development Supabase client - no real database connection');
-}
+// Helper function to check DB connection
+export const checkDatabaseConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('products').select('count(*)', { count: 'exact' });
+    if (error) throw error;
+    return { connected: true, count: data };
+  } catch (error) {
+    console.error('Database connection error:', error);
+    return { connected: false, error };
+  }
+};

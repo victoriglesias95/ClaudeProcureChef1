@@ -54,17 +54,17 @@ const RequestDetails = () => {
   };
 
   const handleSupplierSelection = async (selectedSupplierIds: string[]) => {
-    if (!request) return;
-    
-    try {
-      await createQuoteRequestsForSuppliers(request.id, selectedSupplierIds);
-      toast.success(`Quote requests sent to ${selectedSupplierIds.length} suppliers`);
-      navigate(`/quote-comparison?requestIds=${request.id}`);
-    } catch (error) {
-      console.error('Failed to create quote requests:', error);
-      toast.error('Failed to send quote requests');
-    }
-  };
+  if (!request) return;
+  
+  try {
+    await createQuoteRequestsForSuppliers(request.id, selectedSupplierIds);
+    toast.success(`Quote requests sent to ${selectedSupplierIds.length} suppliers`);
+    navigate('/quotes?tab=requests'); // Updated to go to requests tab
+  } catch (error) {
+    console.error('Failed to create quote requests:', error);
+    toast.error('Failed to send quote requests');
+  }
+};
 
   const handleApprove = () => {
     toast.info('Approve functionality coming soon!');

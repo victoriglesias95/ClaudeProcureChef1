@@ -6,7 +6,13 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import QuoteRequestsTable from '../components/quotes/QuoteRequestsTable';
-import { getQuoteComparisons, getSuppliers, getQuoteRequests } from '../services/quotes';
+import { 
+  getQuoteComparisons, 
+  getSuppliers, 
+  getQuoteRequests,
+  sendQuoteRequestReminder,
+  cancelQuoteRequest
+} from '../services/quotes';
 import { Supplier, QuoteComparison, QuoteRequest } from '../types/quote';
 
 const Quotes = () => {
@@ -21,28 +27,34 @@ const Quotes = () => {
   const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [suppliersData, comparisonsData, requestsData] = await Promise.all([
-          getSuppliers(),
-          getQuoteComparisons(),
-          getQuoteRequests()
-        ]);
-        
-        setSuppliers(suppliersData);
-        setComparisons(comparisonsData);
-        setQuoteRequests(requestsData);
-      } catch (error) {
-        console.error('Failed to load quotes data:', error);
-        toast.error('Failed to load quotes data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Define loadData function outside useEffect so handlers can use it
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [suppliersData, comparisonsData, requestsData] = await Promise.all([
+        getSuppliers(),
+        getQuoteComparisons(),
+        getQuoteRequests()
+      ]);
+      
+      setSuppliers(suppliersData);
+      setComparisons(comparisonsData);
+      setQuoteRequests(requestsData);
+    } catch (error) {
+      console.error('Failed to load quotes data:', error);
+      toast.error('Failed to load quotes data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadData();
+    
+    // Set up a refresh interval for development purposes
+    // This simulates real-time updates to quote statuses
+    const intervalId = setInterval(loadData, 5000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const formatCurrency = (amount: number) => {
@@ -54,11 +66,31 @@ const Quotes = () => {
   };
   
   const handleSendReminder = (requestId: string) => {
-    toast.success(`Reminder sent for quote request ${requestId}`);
+    sendQuoteRequestReminder(requestId)
+      .then(() => {
+        toast.success(`Reminder sent for quote request ${requestId}`);
+        loadData();
+      })
+      .catch(error => {
+        console.error('Error sending reminder:', error);
+        toast.error('Failed to send reminder');
+      });
   };
   
   const handleCancelRequest = (requestId: string) => {
-    toast.success(`Quote request ${requestId} cancelled`);
+    cancelQuoteRequest(requestId)
+      .then(() => {
+        toast.success(`Quote request ${requestId} cancelled`);
+        loadData();
+      })
+      .catch(error => {
+        console.error('Error cancelling request:', error);
+        toast.error('Failed to cancel request');
+      });
+  };
+  
+  const handleViewQuote = (quoteId: string) => {
+    navigate(`/quotes/${quoteId}`);
   };
 
   // Calculate totals
@@ -149,7 +181,7 @@ const Quotes = () => {
                     quoteRequests={quoteRequests}
                     onSendReminder={handleSendReminder}
                     onCancel={handleCancelRequest}
-                    onViewQuote={(quoteId) => navigate(`/quotes/${quoteId}`)}
+                    onViewQuote={handleViewQuote}
                   />
                 )}
               </CardContent>

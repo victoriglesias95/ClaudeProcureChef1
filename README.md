@@ -1,105 +1,204 @@
-ProcureChef Development Status - January 2025 Update
-Project Overview
-ProcureChef is a restaurant procurement management system with inventory tracking, request management, and advanced quote comparison features with validity tracking.
-Recently Completed Features
-1. Quote Validity Management System ✅
+ProcureChef - Restaurant Procurement Management System
+ProcureChef is a comprehensive restaurant procurement management system designed to streamline the entire procurement workflow from inventory tracking to order management.
+Project Status (May 2025)
+ProcureChef is currently in active development with a functioning procurement workflow using mock data. The application is ready for database integration with Supabase.
+Completed Features
+Core Functionality
 
-Quote expiry tracking: Quotes now have expiry dates and validity periods
-Visual indicators: Color-coded status (green=valid, yellow=expiring, red=expired)
-Blanket quotes: Support for long-term pricing agreements
-Smart quote reuse: System identifies and uses valid existing quotes
+✅ Inventory management with stock counting
+✅ Request creation and approval workflow
+✅ Quote management with supplier selection
+✅ Quote validity tracking and status indicators
+✅ Quote detail views for individual quotes
+✅ Product price comparison across suppliers
+✅ Order generation from selected quotes
+✅ Supplier management and profiles
 
-2. Enhanced UI/UX ✅
+Enhanced Functionality
 
-Active page highlighting in navigation
-Improved request-to-quote workflow
-Better inventory counting UI with +/- buttons
-Dashboard warnings for unordered approved requests
-Quote validity indicators in comparison table
+✅ Quote validity system with expiry dates and visual indicators
+✅ Blanket quote support for long-term pricing agreements
+✅ Smart quote reuse to avoid unnecessary requests
+✅ Quote request workflow with status tracking
+✅ Enhanced UI with proper navigation and visual feedback
 
-3. Complete Feature Set ✅
+Current Workflow
 
-Orders page with status tracking
-Suppliers page with contact info
-Request details page
-Quote details references
-Product price comparison with validity
+Inventory Management
 
-Current System Architecture
+View current stock levels
+Perform inventory counts
+Monitor low stock items
+
+
+Request Creation & Approval
+
+Create procurement requests from inventory
+Submit requests for approval
+Approve/reject requests
+
+
+Quote Request Management
+
+Select suppliers for quote requests
+Send quote requests to suppliers
+Track pending quote requests
+View received quotes
+
+
+Quote Comparison & Selection
+
+Compare pricing across suppliers
+View quote details and validity periods
+Select best quotes for each product
+
+
+Order Generation & Tracking
+
+Generate orders from selected quotes
+Track order status
+View order history
+
+
+
+Technical Details
+
+Frontend: React 18 with TypeScript
+Styling: Tailwind CSS
+Routing: React Router v6
+Database: Supabase (prepared)
+State Management: React Context API
+API Handling: Service layer with data access pattern
+
+Next Steps
+
+Immediate Priorities
+
+Complete database integration with Supabase
+Implement bulk request selection
+Add supplier-specific filtering
+
+
+Upcoming Features
+
+Order receiving module
+Advanced reporting and analytics
+Multi-location support
+Mobile optimization
+
+
+Future Enhancements
+
+Email notifications for approvals and quotes
+Budget tracking and variance reporting
+Integration with accounting systems
+Barcode scanning for receiving
+
+
+
+Getting Started
+Prerequisites
+
+Node.js 18+
+npm or yarn
+
+Installation
+
+Clone the repository
+Install dependencies: npm install
+Create a .env file with Supabase credentials:
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_key
+
+Start the development server: npm run dev
+
+Database Setup
+
+Navigate to /admin in the application
+Click "Setup Database" to populate initial data
+
+Documentation
 File Structure
 src/
 ├── components/
+│   ├── layout/
 │   ├── quotes/
-│   │   └── ProductQuoteComparisonTable.tsx
 │   ├── requests/
-│   │   ├── RequestCard.tsx
-│   │   └── RequestSubmissionModal.tsx
-│   └── inventory/
-│       └── CountModal.tsx
+│   ├── inventory/
+│   └── ui/
 ├── pages/
 │   ├── Dashboard.tsx
 │   ├── Inventory.tsx
 │   ├── Requests.tsx
 │   ├── RequestDetails.tsx
 │   ├── Quotes.tsx
+│   ├── QuoteDetails.tsx
 │   ├── ProductQuoteComparison.tsx
 │   ├── Orders.tsx
-│   └── Suppliers.tsx
+│   ├── Suppliers.tsx
+│   └── Admin.tsx
 ├── services/
-│   ├── quotes.ts (with data access layer pattern)
+│   ├── quotes.ts
 │   ├── products.ts
-│   └── inventory.ts
+│   ├── inventory.ts
+│   └── supabase.ts
 ├── mocks/
 │   ├── data.ts
-│   └── procurement-data.ts (with quote validity)
+│   └── procurement-data.ts
 ├── types/
-│   ├── quote.ts (with validity fields)
+│   ├── quote.ts
 │   ├── product.ts
 │   └── request.ts
 └── utils/
-    └── quoteUtils.ts (validity checking functions)
-Key Technical Improvements
+    ├── quoteUtils.ts
+    └── databaseSetup.ts
+Key Features
+Inventory Management
 
-Data Access Layer Pattern: Services now separate data access from business logic for easier database migration
-Type Safety: All components properly typed with TypeScript
-Quote Validity System: Intelligent quote management reduces unnecessary supplier communications
-Mock Data Enhancement: Realistic quote expiry dates and blanket quote support
+Real-time inventory tracking
+Inventory count functionality
+Low stock alerts and notifications
 
-Next Steps
-Immediate Priorities
+Request Management
 
-Quote detail views implementation
-Bulk request selection for quotes
-Supplier-specific product filtering
+Detailed request creation and tracking
+Approval workflow with status updates
+Multi-item request support
 
-Future Enhancements
+Quote Management
 
-Database integration (Supabase)
-PWA features for mobile access
-Advanced reporting and analytics
-Real-time notifications
+Quote request tracking with expiry dates
+Quote validity monitoring
+Quote comparison across suppliers
 
-Current Workflow
+Order Management
 
-Inventory → Request: Select items, create request
-Request → Quote: Approve request, generate quotes
-Quote → Comparison: View validity, compare prices
-Comparison → Order: Select suppliers, create orders
-Dashboard: Monitor unordered requests
+Order generation from selected quotes
+Order status tracking
+Delivery scheduling
 
-Technical Stack
+Supplier Management
 
-React 18 with TypeScript
-Tailwind CSS
-React Router v6
-Supabase (prepared, using mocks)
-Custom UI components
+Supplier profiles and contact information
+Supplier performance tracking
+Preferred supplier designation
 
-Migration Notes
-The app is ready for database integration with:
+Database Schema
+ProcureChef uses a Supabase PostgreSQL database with the following key tables:
 
-Separated data access layer
-Consistent service patterns
-Mock data structure matching planned DB schema
+users - Authentication and user profiles
+products - Product catalog management
+inventory - Inventory levels and tracking
+suppliers - Supplier information
+requests - Procurement requests
+request_items - Items within requests
+quote_requests - Quote requests sent to suppliers
+quotes - Quotes received from suppliers
+quote_items - Individual items within quotes
+orders - Purchase orders generated
+order_items - Items within purchase orders
 
-
+Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
+License
+This project is proprietary software.
