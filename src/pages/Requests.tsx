@@ -5,7 +5,7 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import RequestCard from '../components/requests/RequestCard';
-import { getRequests, createQuoteComparisonFromRequest } from '../services/quotes';
+import { getRequests } from '../services/requests';
 import { createQuoteComparisonFromRequest } from '../services/quotes';
 import { Request } from '../types/request';
 
@@ -32,7 +32,7 @@ const Requests = () => {
 
   const handleViewDetails = (requestId: string) => {
     console.log('View details for request:', requestId);
-    toast.info('Request details view coming soon!');
+    navigate(`/requests/${requestId}`);
   };
   
   const handleNewRequest = () => {
@@ -42,20 +42,16 @@ const Requests = () => {
   };
   
   const handleCreateQuote = async (requestId: string) => {
-  try {
-    const quoteComparison = await createQuoteComparisonFromRequest(requestId);
-    
-    if (quoteComparison) {
+    try {
+      const quoteComparison = await createQuoteComparisonFromRequest(requestId);
       toast.success('Quote comparison created successfully');
       navigate(`/quote-comparison?requestIds=${requestId}`);
-    } else {
+    } catch (error) {
+      console.error('Failed to create quote comparison:', error);
       toast.error('Failed to create quote comparison');
     }
-  } catch (error) {
-    console.error('Failed to create quote comparison:', error);
-    toast.error('Failed to create quote comparison');
-  }
-};
+  };
+
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">

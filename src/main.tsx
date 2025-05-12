@@ -5,6 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './styles/globals.css';
 
+import { testSupabaseConnection } from './utils/testSupabase';
+
+// Test Supabase connection on startup
+testSupabaseConnection().then(result => {
+  console.log("Supabase connection test complete:", result.success ? "SUCCESS" : "FAILED");
+}).catch(err => {
+  console.error("Error testing Supabase connection:", err);
+});
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {

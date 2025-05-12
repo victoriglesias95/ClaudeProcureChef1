@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import MainLayout from '../components/layout/MainLayout';
@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button';
 import StatusBadge from '../components/ui/StatusBadge';
 import SupplierSelectionModal from '../components/quotes/SupplierSelectionModal';
-import { getRequestById, createQuoteRequestsForSuppliers, getSuppliers } from '../services/quotes';
+import { getRequestById } from '../services/requests';
+import { createQuoteRequestsForSuppliers, getSuppliers } from '../services/quotes';
 import { Request } from '../types/request';
 import { Supplier } from '../types/quote';
 
@@ -54,17 +55,17 @@ const RequestDetails = () => {
   };
 
   const handleSupplierSelection = async (selectedSupplierIds: string[]) => {
-  if (!request) return;
-  
-  try {
-    await createQuoteRequestsForSuppliers(request.id, selectedSupplierIds);
-    toast.success(`Quote requests sent to ${selectedSupplierIds.length} suppliers`);
-    navigate('/quotes?tab=requests'); // Updated to go to requests tab
-  } catch (error) {
-    console.error('Failed to create quote requests:', error);
-    toast.error('Failed to send quote requests');
-  }
-};
+    if (!request) return;
+    
+    try {
+      await createQuoteRequestsForSuppliers(request.id, selectedSupplierIds);
+      toast.success(`Quote requests sent to ${selectedSupplierIds.length} suppliers`);
+      navigate('/quotes?tab=requests');
+    } catch (error) {
+      console.error('Failed to create quote requests:', error);
+      toast.error('Failed to send quote requests');
+    }
+  };
 
   const handleApprove = () => {
     toast.info('Approve functionality coming soon!');

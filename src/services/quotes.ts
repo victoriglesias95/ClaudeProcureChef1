@@ -12,6 +12,9 @@ import {
   QuoteItem
 } from '../types/quote';
 
+// Re-export functions from requests.ts
+export { getRequests, getRequestById } from './requests';
+
 /**
  * Get all suppliers
  */
