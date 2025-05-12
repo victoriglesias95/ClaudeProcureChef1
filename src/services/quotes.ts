@@ -73,7 +73,7 @@ export async function getQuoteRequests(): Promise<QuoteRequest[]> {
 export async function getQuoteComparisons(): Promise<QuoteComparison[]> {
   try {
     // First, get all requests with quotes
-    // FIX: Separate the subquery to resolve the PostgrestFilterBuilder error
+    // Separate the subquery to resolve the PostgrestFilterBuilder error
     const quotesSubquery = await supabase
       .from('quotes')
       .select('request_id');
@@ -135,6 +135,55 @@ export async function getQuoteComparisons(): Promise<QuoteComparison[]> {
   } catch (error) {
     console.error('Error fetching quote comparisons:', error);
     return [];
+  }
+}
+
+/**
+ * Create a quote comparison from a request
+ */
+export async function createQuoteComparisonFromRequest(requestId: string): Promise<QuoteComparison | null> {
+  try {
+    // First, get the request details
+    const { data: request, error: requestError } = await supabase
+      .from('requests')
+      .select('*')
+      .eq('id', requestId)
+      .single();
+    
+    if (requestError) throw requestError;
+    if (!request) throw new Error(`Request with ID ${requestId} not found`);
+    
+    // Get all quotes for this request
+    const { data: quotes, error: quotesError } = await supabase
+      .from('quotes')
+      .select(`
+        *,
+        items:quote_items(*)
+      `)
+      .eq('request_id', requestId);
+    
+    if (quotesError) throw quotesError;
+    
+    // If no quotes found, return null
+    if (!quotes || quotes.length === 0) {
+      console.warn(`No quotes found for request ${requestId}`);
+      return null;
+    }
+    
+    // Create a comparison object
+    const comparison: QuoteComparison = {
+      id: `comp_${requestId}`,
+      request_id: requestId,
+      request: request,
+      supplier_quotes: quotes,
+      created_at: new Date().toISOString(),
+      status: 'open'
+    };
+    
+    return comparison;
+  } catch (error) {
+    console.error(`Error creating quote comparison for request ${requestId}:`, error);
+    return null;
   }
 }
 
@@ -317,7 +366,7 @@ export async function getProductQuoteComparison(requestIds: string[] = []): Prom
     
     if (requestIds.length === 0) {
       // Get all request IDs that have quotes
-      // FIX: Separate the subquery to resolve the PostgrestFilterBuilder error
+      // Separate the subquery to resolve the PostgrestFilterBuilder error
       const quotesQuery = await supabase
         .from('quotes')
         .select('request_id');
@@ -420,7 +469,7 @@ export async function getProductQuoteComparison(requestIds: string[] = []): Prom
     
     // Then, add supplier quotes
     quotes.forEach(quote => {
-      // FIX: Add type annotation to quoteItem parameter
+      // Add type annotation to quoteItem parameter
       quote.items.forEach((quoteItem: QuoteItem) => {
         const productEntry = productMap.get(quoteItem.product_id);
         if (!productEntry) return;

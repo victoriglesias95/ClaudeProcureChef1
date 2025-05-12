@@ -4,7 +4,8 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import StatusBadge from '../components/ui/StatusBadge';
-import { getRequests, getQuoteComparisons, getOrders } from '../services/quotes';
+import { getRequests } from '../services/requests';
+import { getQuoteComparisons, getOrders } from '../services/quotes';
 import { Request } from '../types/request';
 import { QuoteComparison, Order } from '../types/quote';
 
