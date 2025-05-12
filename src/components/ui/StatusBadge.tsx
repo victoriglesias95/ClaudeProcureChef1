@@ -1,6 +1,6 @@
 import React from 'react';
 
-type StatusType = 'low' | 'medium' | 'high' | 'pending' | 'approved' | 'rejected' | 'completed' | 'draft' | 'submitted';
+type StatusType = 'low' | 'medium' | 'high' | 'pending' | 'approved' | 'rejected' | 'completed' | 'draft' | 'submitted' | 'sent' | 'received' | 'processed';
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -22,12 +22,18 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => 
         return 'bg-gray-100 text-gray-800';
       case 'submitted':
         return 'bg-indigo-100 text-indigo-800';
+      case 'sent':
+        return 'bg-purple-100 text-purple-800';
+      case 'received':
+        return 'bg-cyan-100 text-cyan-800';
       case 'approved':
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
       case 'completed':
         return 'bg-gray-100 text-gray-800';
+      case 'processed':
+        return 'bg-teal-100 text-teal-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

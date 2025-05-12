@@ -5,31 +5,40 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import StatusBadge from '../components/ui/StatusBadge';
-import { getRequestById, createQuoteComparisonFromRequest } from '../services/quotes';
+import SupplierSelectionModal from '../components/quotes/SupplierSelectionModal';
+import { getRequestById, createQuoteRequestsForSuppliers, getSuppliers } from '../services/quotes';
 import { Request } from '../types/request';
+import { Supplier } from '../types/quote';
 
 const RequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [request, setRequest] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSupplierSelection, setShowSupplierSelection] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   useEffect(() => {
-    const loadRequest = async () => {
+    const loadData = async () => {
       if (!id) return;
       
       try {
-        const data = await getRequestById(id);
-        setRequest(data);
+        const [requestData, suppliersData] = await Promise.all([
+          getRequestById(id),
+          getSuppliers()
+        ]);
+        
+        setRequest(requestData);
+        setSuppliers(suppliersData);
       } catch (error) {
-        console.error('Failed to load request:', error);
+        console.error('Failed to load data:', error);
         toast.error('Failed to load request details');
       } finally {
         setLoading(false);
       }
     };
 
-    loadRequest();
+    loadData();
   }, [id]);
 
   const formatDate = (dateString: string) => {
@@ -40,16 +49,20 @@ const RequestDetails = () => {
     return `R$${amount.toFixed(2)}`;
   };
 
-  const handleCreateQuote = async () => {
+  const handleCreateQuote = () => {
+    setShowSupplierSelection(true);
+  };
+
+  const handleSupplierSelection = async (selectedSupplierIds: string[]) => {
     if (!request) return;
     
     try {
-      await createQuoteComparisonFromRequest(request.id);
-      toast.success('Quote comparison created successfully');
+      await createQuoteRequestsForSuppliers(request.id, selectedSupplierIds);
+      toast.success(`Quote requests sent to ${selectedSupplierIds.length} suppliers`);
       navigate(`/quote-comparison?requestIds=${request.id}`);
     } catch (error) {
-      console.error('Failed to create quote comparison:', error);
-      toast.error('Failed to create quote comparison');
+      console.error('Failed to create quote requests:', error);
+      toast.error('Failed to send quote requests');
     }
   };
 
@@ -235,6 +248,15 @@ const RequestDetails = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Supplier Selection Modal */}
+      <SupplierSelectionModal
+        isOpen={showSupplierSelection}
+        onClose={() => setShowSupplierSelection(false)}
+        suppliers={suppliers}
+        onConfirm={handleSupplierSelection}
+        productIds={request?.items.map(item => item.product_id)}
+      />
     </MainLayout>
   );
 };

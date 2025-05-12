@@ -137,3 +137,17 @@ export type OrderItem = {
   total: number;
   notes?: string;
 };
+
+// src/types/quote.ts (add to existing types)
+export type QuoteRequestStatus = 'pending' | 'sent' | 'received' | 'expired';
+
+export interface QuoteRequest {
+  id: string;
+  request_id: string;
+  supplier_id: string;
+  supplier_name: string;
+  sent_at: string;
+  status: QuoteRequestStatus;
+  response_deadline: string;
+  quote_id?: string; // When supplier responds
+}

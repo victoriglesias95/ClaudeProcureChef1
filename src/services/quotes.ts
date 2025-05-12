@@ -1,14 +1,18 @@
+// src/services/quotes.ts
 import { supabase } from './supabase';
 import { 
-  Quote,
   QuoteComparison, 
   SupplierQuote,
   ProductQuoteComparison,
   SupplierProductQuote,
   Order,
-  QuoteStatus  // Add this import
+  QuoteStatus,
+  QuoteItem,
+  Supplier,
+  QuoteRequest,
+  QuoteRequestStatus
 } from '../types/quote';
-import { Request, RequestItem } from '../types/request';  // Add RequestItem import
+import { Request, RequestItem } from '../types/request';
 import { 
   mockSuppliers, 
   mockSupplierProducts, 
@@ -22,6 +26,7 @@ const USE_MOCK_DATA = true;
 // Mock data storage - will be removed when moving to real database
 const mockQuoteComparisons: QuoteComparison[] = [];
 const mockOrders: Order[] = [];
+const mockQuoteRequests: QuoteRequest[] = [];
 
 // Helper functions
 const generateId = () => {
@@ -172,6 +177,100 @@ const quotesDataAccess = {
     const { data, error } = await supabase
       .from('quote_comparisons')
       .insert({ ...comparison })
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  },
+
+  getQuoteById: async (id: string) => {
+    if (USE_MOCK_DATA) {
+      // Search through all comparisons for the specific quote
+      for (const comparison of mockQuoteComparisons) {
+        const quote = comparison.supplier_quotes.find(q => q.id === id);
+        if (quote) return quote;
+      }
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('quotes')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  }
+};
+
+/**
+ * Data access layer for quote requests
+ */
+const quoteRequestsDataAccess = {
+  getAll: async () => {
+    if (USE_MOCK_DATA) {
+      return [...mockQuoteRequests];
+    }
+    
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .select('*')
+      .order('sent_at', { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  },
+  
+  getById: async (id: string) => {
+    if (USE_MOCK_DATA) {
+      return mockQuoteRequests.find(req => req.id === id) || null;
+    }
+    
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    return data;
+  },
+  
+  createRequests: async (requests: Omit<QuoteRequest, 'id'>[]) => {
+    if (USE_MOCK_DATA) {
+      const newRequests = requests.map(req => ({
+        ...req,
+        id: `req_${generateId()}`
+      }));
+      
+      mockQuoteRequests.push(...newRequests);
+      return newRequests;
+    }
+    
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .insert(requests)
+      .select();
+      
+    if (error) throw error;
+    return data || [];
+  },
+  
+  updateRequest: async (id: string, updates: Partial<QuoteRequest>) => {
+    if (USE_MOCK_DATA) {
+      const request = mockQuoteRequests.find(req => req.id === id);
+      if (!request) return null;
+      
+      Object.assign(request, updates);
+      return request;
+    }
+    
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .update(updates)
+      .eq('id', id)
       .select()
       .single();
       
@@ -363,6 +462,18 @@ export async function getRequestById(id: string): Promise<Request | null> {
 }
 
 /**
+ * Get all quote requests
+ */
+export async function getQuoteRequests(): Promise<QuoteRequest[]> {
+  try {
+    return await quoteRequestsDataAccess.getAll();
+  } catch (error) {
+    console.error('Error fetching quote requests:', error);
+    return [];
+  }
+}
+
+/**
  * Create a quote comparison from a request
  */
 export async function createQuoteComparisonFromRequest(requestId: string): Promise<QuoteComparison> {
@@ -403,6 +514,209 @@ export async function createQuoteComparisonFromRequest(requestId: string): Promi
   } catch (error) {
     console.error(`Error creating quote comparison for request ${requestId}:`, error);
     throw error;
+  }
+}
+
+/**
+ * Create quote requests for selected suppliers
+ */
+export async function createQuoteRequestsForSuppliers(
+  requestId: string, 
+  supplierIds: string[]
+): Promise<QuoteRequest[]> {
+  try {
+    const request = await requestsDataAccess.getById(requestId);
+    
+    if (!request) {
+      throw new Error(`Request with ID ${requestId} not found`);
+    }
+    
+    // Create new quote requests
+    const newRequests: QuoteRequest[] = [];
+    
+    for (const supplierId of supplierIds) {
+      const supplier = mockSuppliers.find(s => s.id === supplierId);
+      if (!supplier) continue;
+      
+      // Calculate response deadline (7 days from now)
+      const now = new Date();
+      const deadline = new Date(now);
+      deadline.setDate(now.getDate() + 7);
+      
+      newRequests.push({
+        id: `qreq_${Date.now()}_${supplierId}`,
+        request_id: requestId,
+        supplier_id: supplierId,
+        supplier_name: supplier.name,
+        sent_at: now.toISOString(),
+        status: 'pending' as QuoteRequestStatus,
+        response_deadline: deadline.toISOString()
+      });
+    }
+    
+    // Store the requests
+    const createdRequests = await quoteRequestsDataAccess.createRequests(
+      newRequests.map(({ id, ...rest }) => rest) // Remove IDs to let data layer handle them
+    );
+    
+    if (USE_MOCK_DATA) {
+      // Simulate quote responses for testing
+      createdRequests.forEach(request => {
+        // Random delay between 3-10 seconds
+        setTimeout(() => {
+          simulateQuoteResponse(request);
+        }, Math.random() * 7000 + 3000);
+      });
+    }
+    
+    return createdRequests;
+  } catch (error) {
+    console.error('Error creating quote requests:', error);
+    throw error;
+  }
+}
+
+/**
+ * Simulate a quote response (for testing only)
+ */
+function simulateQuoteResponse(quoteRequest: QuoteRequest) {
+  // Find the request
+  const request = mockProcurementRequests.find(r => r.id === quoteRequest.request_id);
+  if (!request) return;
+  
+  // Find the supplier
+  const supplier = mockSuppliers.find(s => s.id === quoteRequest.supplier_id);
+  if (!supplier) return;
+  
+  // Generate a mock quote
+  const quote = generateMockQuoteForSupplier(request, supplier);
+  if (!quote) return;
+  
+  // Update the quote request status
+  quoteRequestsDataAccess.updateRequest(quoteRequest.id, {
+    status: 'received',
+    quote_id: quote.id
+  });
+  
+  // Add the quote to a comparison
+  let comparison = mockQuoteComparisons.find(c => c.request_id === request.id);
+  
+  if (!comparison) {
+    // Create a new comparison
+    comparison = {
+      id: `comp_${request.id}`,
+      request_id: request.id,
+      request: request,
+      supplier_quotes: [],
+      created_at: new Date().toISOString(),
+      status: 'open'
+    };
+    mockQuoteComparisons.push(comparison);
+  }
+  
+  // Add the quote to the comparison
+  comparison.supplier_quotes.push(quote);
+  
+  console.log(`Simulated quote response for request ${quoteRequest.id}`);
+}
+
+/**
+ * Helper function to generate a quote for a specific supplier
+ */
+function generateMockQuoteForSupplier(request: Request, supplier: Supplier): SupplierQuote | null {
+  const now = new Date();
+  const expiryDate = new Date(now);
+  expiryDate.setDate(now.getDate() + 14);
+  
+  // Generate quote items for this supplier
+  const quoteItems: QuoteItem[] = [];
+  
+  request.items.forEach(item => {
+    const productSupplierData = mockSupplierProducts.find(p => p.product_id === item.product_id);
+    const supplierOffering = productSupplierData?.supplier_offerings.find(
+      so => so.supplier_id === supplier.id
+    );
+    
+    if (!supplierOffering || !supplierOffering.available) return;
+    
+    // Apply volume pricing if available
+    let price = supplierOffering.price;
+    if (supplierOffering.volume_pricing) {
+      const tier = supplierOffering.volume_pricing.find(vp => 
+        item.quantity >= vp.minQuantity && 
+        (vp.maxQuantity === null || item.quantity <= vp.maxQuantity)
+      );
+      if (tier) price = tier.price;
+    }
+    
+    quoteItems.push({
+      id: `qitem_${supplier.id}_${item.id}`,
+      request_item_id: item.id,
+      product_id: item.product_id,
+      product_name: item.product_name,
+      quantity: item.quantity,
+      unit: item.unit,
+      price_per_unit: price,
+      in_stock: supplierOffering.available,
+      supplier_product_code: supplierOffering.supplier_product_code
+    });
+  });
+  
+  if (quoteItems.length === 0) return null;
+  
+  const totalAmount = quoteItems.reduce(
+    (sum, item) => sum + (item.price_per_unit * item.quantity),
+    0
+  );
+  
+  return {
+    id: `quote_${supplier.id}_${request.id}_${Date.now()}`,
+    supplier_id: supplier.id,
+    supplier_name: supplier.name,
+    request_id: request.id,
+    created_at: now.toISOString(),
+    expiry_date: expiryDate.toISOString(),
+    status: 'received' as QuoteStatus,
+    delivery_date: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+    items: quoteItems,
+    total_amount: Number(totalAmount.toFixed(2)),
+    validity_days: 14,
+    is_blanket_quote: false
+  };
+}
+
+/**
+ * Send a reminder for a quote request
+ */
+export async function sendQuoteRequestReminder(requestId: string): Promise<boolean> {
+  try {
+    // In a real app, this would send an email or notification
+    // For mock, just update the status
+    await quoteRequestsDataAccess.updateRequest(requestId, {
+      sent_at: new Date().toISOString() // Update the sent time
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error sending reminder for quote request ${requestId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Cancel a quote request
+ */
+export async function cancelQuoteRequest(requestId: string): Promise<boolean> {
+  try {
+    // Update the request status
+    await quoteRequestsDataAccess.updateRequest(requestId, {
+      status: 'expired'
+    });
+    
+    return true;
+  } catch (error) {
+    console.error(`Error cancelling quote request ${requestId}:`, error);
+    return false;
   }
 }
 
@@ -630,5 +944,77 @@ export async function getOrderById(id: string): Promise<Order | null> {
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
     return null;
+  }
+}
+
+/**
+ * Get a quote by ID
+ */
+export async function getQuoteById(id: string): Promise<SupplierQuote | null> {
+  try {
+    return await quotesDataAccess.getQuoteById(id);
+  } catch (error) {
+    console.error(`Error fetching quote ${id}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Accept a quote
+ */
+export async function acceptQuote(id: string): Promise<boolean> {
+  try {
+    if (USE_MOCK_DATA) {
+      // Find and update the quote in mock data
+      for (const comparison of mockQuoteComparisons) {
+        const quote = comparison.supplier_quotes.find(q => q.id === id);
+        if (quote) {
+          quote.status = 'approved';
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('quotes')
+      .update({ status: 'approved' })
+      .eq('id', id);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error(`Error accepting quote ${id}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Reject a quote
+ */
+export async function rejectQuote(id: string): Promise<boolean> {
+  try {
+    if (USE_MOCK_DATA) {
+      // Find and update the quote in mock data
+      for (const comparison of mockQuoteComparisons) {
+        const quote = comparison.supplier_quotes.find(q => q.id === id);
+        if (quote) {
+          quote.status = 'rejected';
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('quotes')
+      .update({ status: 'rejected' })
+      .eq('id', id);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error(`Error rejecting quote ${id}:`, error);
+    return false;
   }
 }
