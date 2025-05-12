@@ -1,32 +1,8 @@
 import { supabase } from './supabase';
-import { Request, RequestItem } from '../types/request';
-
-// Mock data flag - consistent with other services
-const USE_MOCK_DATA = false; 
-
-// Mock requests for development
-const mockRequests: Request[] = [];
-
-// Generate a unique ID
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
+import { Request, RequestItem, RequestStatus } from '../types/request';
 
 // Create a new request
 export async function createRequest(requestData: Omit<Request, 'id' | 'created_at' | 'status'>): Promise<Request> {
-  if (USE_MOCK_DATA) {
-    const newRequest: Request = {
-      id: generateId(),
-      created_at: new Date().toISOString(),
-      status: 'submitted',
-      ...requestData,
-    };
-    
-    // Add to mock data
-    mockRequests.push(newRequest);
-    return newRequest;
-  }
-  
   try {
     // Prepare request and items data
     const { items, ...requestInfo } = requestData;
@@ -87,10 +63,6 @@ export async function createRequest(requestData: Omit<Request, 'id' | 'created_a
 
 // Get all requests
 export async function getRequests(): Promise<Request[]> {
-  if (USE_MOCK_DATA) {
-    return [...mockRequests];
-  }
-  
   try {
     const { data, error } = await supabase
       .from('requests')
@@ -114,10 +86,6 @@ export async function getRequests(): Promise<Request[]> {
 
 // Get request by ID
 export async function getRequestById(id: string): Promise<Request | null> {
-  if (USE_MOCK_DATA) {
-    return mockRequests.find(request => request.id === id) || null;
-  }
-  
   try {
     const { data, error } = await supabase
       .from('requests')
@@ -141,16 +109,7 @@ export async function getRequestById(id: string): Promise<Request | null> {
 }
 
 // Update request status
-export async function updateRequestStatus(id: string, status: Request['status']): Promise<boolean> {
-  if (USE_MOCK_DATA) {
-    const requestIndex = mockRequests.findIndex(req => req.id === id);
-    if (requestIndex !== -1) {
-      mockRequests[requestIndex].status = status;
-      return true;
-    }
-    return false;
-  }
-  
+export async function updateRequestStatus(id: string, status: RequestStatus): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('requests')

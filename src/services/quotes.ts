@@ -8,7 +8,8 @@ import {
   QuoteStatus,
   Supplier,
   QuoteRequest,
-  QuoteRequestStatus
+  QuoteRequestStatus,
+  QuoteItem
 } from '../types/quote';
 
 /**
@@ -72,6 +73,15 @@ export async function getQuoteRequests(): Promise<QuoteRequest[]> {
 export async function getQuoteComparisons(): Promise<QuoteComparison[]> {
   try {
     // First, get all requests with quotes
+    // FIX: Separate the subquery to resolve the PostgrestFilterBuilder error
+    const quotesSubquery = await supabase
+      .from('quotes')
+      .select('request_id');
+    
+    if (quotesSubquery.error) throw quotesSubquery.error;
+    
+    const requestIds = quotesSubquery.data?.map(q => q.request_id) || [];
+    
     const { data: requestsWithQuotes, error: requestsError } = await supabase
       .from('requests')
       .select(`
@@ -85,8 +95,7 @@ export async function getQuoteComparisons(): Promise<QuoteComparison[]> {
         notes,
         total_amount
       `)
-      .in('id', supabase.from('quotes').select('request_id'))
-      .order('created_at', { ascending: false });
+      .in('id', requestIds);
     
     if (requestsError) throw requestsError;
     
@@ -308,10 +317,17 @@ export async function getProductQuoteComparison(requestIds: string[] = []): Prom
     
     if (requestIds.length === 0) {
       // Get all request IDs that have quotes
+      // FIX: Separate the subquery to resolve the PostgrestFilterBuilder error
+      const quotesQuery = await supabase
+        .from('quotes')
+        .select('request_id');
+      
+      if (quotesQuery.error) throw quotesQuery.error;
+      
       const { data: requestsData, error: requestsError } = await supabase
         .from('requests')
         .select('id')
-        .in('id', supabase.from('quotes').select('request_id'));
+        .in('id', quotesQuery.data?.map(q => q.request_id) || []);
       
       if (requestsError) throw requestsError;
       
@@ -404,7 +420,8 @@ export async function getProductQuoteComparison(requestIds: string[] = []): Prom
     
     // Then, add supplier quotes
     quotes.forEach(quote => {
-      quote.items.forEach(quoteItem => {
+      // FIX: Add type annotation to quoteItem parameter
+      quote.items.forEach((quoteItem: QuoteItem) => {
         const productEntry = productMap.get(quoteItem.product_id);
         if (!productEntry) return;
         
@@ -627,5 +644,66 @@ export async function getOrderById(id: string): Promise<Order | null> {
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
     return null;
+  }
+}
+
+/**
+ * Update order status and register receipt
+ */
+export async function receiveOrder(
+  orderId: string, 
+  receivedItems: Record<string, number>,
+  notes: Record<string, string> = {}
+): Promise<boolean> {
+  try {
+    // 1. Update order status
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ status: 'delivered' })
+      .eq('id', orderId);
+    
+    if (orderError) throw orderError;
+    
+    // 2. Update inventory quantities
+    for (const [itemId, quantity] of Object.entries(receivedItems)) {
+      // Get order item details
+      const { data: orderItem, error: itemError } = await supabase
+        .from('order_items')
+        .select('product_id, quantity')
+        .eq('id', itemId)
+        .single();
+      
+      if (itemError) throw itemError;
+      
+      // Get current inventory
+      const { data: inventory, error: inventoryError } = await supabase
+        .from('inventory')
+        .select('current_stock')
+        .eq('product_id', orderItem.product_id)
+        .single();
+      
+      if (inventoryError) throw inventoryError;
+      
+      // Calculate new stock level
+      const newStock = (inventory?.current_stock || 0) + quantity;
+      const stockLevel = newStock <= 5 ? 'low' : newStock <= 20 ? 'medium' : 'high';
+      
+      // Update inventory
+      const { error: updateError } = await supabase
+        .from('inventory')
+        .update({
+          current_stock: newStock,
+          stock_level: stockLevel,
+          last_updated: new Date().toISOString()
+        })
+        .eq('product_id', orderItem.product_id);
+      
+      if (updateError) throw updateError;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error receiving order:', error);
+    return false;
   }
 }

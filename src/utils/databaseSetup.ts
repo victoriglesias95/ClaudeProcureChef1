@@ -1,5 +1,11 @@
 import { supabase } from '../services/supabase';
-import { mockProducts, mockSuppliers } from '../mocks/procurement-data';
+import { mockSuppliers } from '../mocks/procurement-data';
+
+// Define a minimal interface for the returned product data
+interface ProductIdName {
+  id: string;
+  name: string;
+}
 
 // Helper function to transform mock data for Supabase
 const transformMockData = () => {
@@ -16,13 +22,22 @@ const transformMockData = () => {
     notes: supplier.notes
   }));
   
-  // Transform products
-  const products = mockProducts.map(product => ({
-    name: product.name,
-    description: product.description,
-    category: product.category,
-    default_unit: product.default_unit
-  }));
+  // Create placeholder products
+  const products = [
+    {
+      name: 'Tomatoes',
+      description: 'Fresh organic tomatoes',
+      category: 'Vegetables',
+      default_unit: 'kg'
+    },
+    {
+      name: 'Potatoes',
+      description: 'Idaho potatoes, great for frying',
+      category: 'Vegetables',
+      default_unit: 'kg'
+    },
+    // Add more products as needed
+  ];
   
   return { suppliers, products };
 };
@@ -58,9 +73,9 @@ export async function setupDatabase() {
     
     if (fetchError) throw fetchError;
     
-    // 4. Create inventory records for each product
+    // 4. Create inventory records for each product - FIX HERE
     console.log('Setting up inventory...');
-    const inventoryItems = insertedProducts.map(product => ({
+    const inventoryItems = insertedProducts.map((product: ProductIdName) => ({
       product_id: product.id,
       current_stock: Math.floor(Math.random() * 100),
       stock_level: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)]
