@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import RequestCard from '../components/requests/RequestCard';
 import { getRequests, createQuoteComparisonFromRequest } from '../services/quotes';
+import { createQuoteComparisonFromRequest } from '../services/quotes';
 import { Request } from '../types/request';
 
 const Requests = () => {
@@ -41,16 +42,20 @@ const Requests = () => {
   };
   
   const handleCreateQuote = async (requestId: string) => {
-    try {
-      const quoteComparison = await createQuoteComparisonFromRequest(requestId);
+  try {
+    const quoteComparison = await createQuoteComparisonFromRequest(requestId);
+    
+    if (quoteComparison) {
       toast.success('Quote comparison created successfully');
       navigate(`/quote-comparison?requestIds=${requestId}`);
-    } catch (error) {
-      console.error('Failed to create quote comparison:', error);
+    } else {
       toast.error('Failed to create quote comparison');
     }
-  };
-
+  } catch (error) {
+    console.error('Failed to create quote comparison:', error);
+    toast.error('Failed to create quote comparison');
+  }
+};
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
