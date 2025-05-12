@@ -81,6 +81,29 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
               setIsAuthenticated(true);
             } else {
               console.warn("No user data found in the users table");
+              // Auto-create a user record if it doesn't exist
+              try {
+                const newUser = {
+                  id: data.session.user.id,
+                  email: data.session.user.email,
+                  role: 'admin', // Default role
+                  name: 'User'
+                };
+                
+                const { error: createError } = await supabase
+                  .from('users')
+                  .insert(newUser);
+                
+                if (createError) {
+                  console.error("Error creating user record:", createError);
+                } else {
+                  console.log("Created missing user record");
+                  setUser(newUser as User);
+                  setIsAuthenticated(true);
+                }
+              } catch (createError) {
+                console.error("Failed to create user record:", createError);
+              }
             }
           } catch (userDataError) {
             console.error("Error in user data fetch:", userDataError);
@@ -100,11 +123,12 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     
     // Setup auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change event:", event);
+      console.log("Auth state change event:", event, "Session:", !!session);
       
       if (event === 'SIGNED_IN' && session) {
         setIsLoading(true);
         try {
+          console.log("User signed in, fetching user data...");
           // Get user details from users table
           const { data: userData, error: userError } = await supabase
             .from('users')
@@ -123,10 +147,36 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
           if (userData) {
             setUser(userData);
             setIsAuthenticated(true);
+          } else {
+            console.warn("No user record found for authenticated user");
+            // Auto-create a user record if it doesn't exist
+            try {
+              const newUser = {
+                id: session.user.id,
+                email: session.user.email,
+                role: 'admin', // Default role
+                name: 'User'
+              };
+              
+              const { error: createError } = await supabase
+                .from('users')
+                .insert(newUser);
+              
+              if (createError) {
+                console.error("Error creating user record:", createError);
+              } else {
+                console.log("Created missing user record");
+                setUser(newUser as User);
+                setIsAuthenticated(true);
+              }
+            } catch (createError) {
+              console.error("Failed to create user record:", createError);
+            }
           }
         } catch (error) {
           console.error("Error fetching user data on auth change:", error);
         } finally {
+          console.log("Setting isLoading to false after auth change");
           setIsLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
@@ -180,12 +230,33 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         
         if (userError) {
           console.error('User data fetch error:', userError);
-          throw userError;
-        }
-        
-        console.log("User data after sign in:", userData);
-        
-        if (userData) {
+          
+          // Auto-create a user record if it doesn't exist
+          try {
+            const newUser = {
+              id: data.user.id,
+              email: data.user.email,
+              role: 'admin', // Default role
+              name: 'User'
+            };
+            
+            const { error: createError } = await supabase
+              .from('users')
+              .insert(newUser);
+            
+            if (createError) {
+              console.error("Error creating user record:", createError);
+            } else {
+              console.log("Created missing user record");
+              setUser(newUser as User);
+              setIsAuthenticated(true);
+            }
+          } catch (createError) {
+            console.error("Failed to create user record:", createError);
+            throw createError;
+          }
+        } else if (userData) {
+          console.log("User data after sign in:", userData);
           setUser(userData);
           setIsAuthenticated(true);
         }
@@ -194,6 +265,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
       console.error('Sign-in process error:', error);
       throw error;
     } finally {
+      console.log("Setting isLoading to false after sign in");
       setIsLoading(false);
     }
   };
@@ -221,21 +293,12 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     signOut
   };
 
+  // ONLY CHANGE: Remove UI rendering logic from the provider
   return (
     <AuthContext.Provider value={value}>
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-            <p className="mt-2 text-gray-700">Loading authentication...</p>
-          </div>
-        </div>
-      ) : (
-        children
-      )}
+      {children}
     </AuthContext.Provider>
   );
 };
 
 // Add this for backward compatibility with any code importing the default export
-export default AuthContext;

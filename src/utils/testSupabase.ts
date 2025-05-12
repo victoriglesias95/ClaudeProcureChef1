@@ -4,7 +4,7 @@ export async function testSupabaseConnection() {
   console.log("Testing Supabase connection...");
   try {
     // Test a simple query to check connection
-    const { data, error } = await supabase.from('users').select('count(*)', { count: 'exact' });
+    const { data, error } = await supabase.from('users').select('*', { count: 'exact' });
     console.log("Supabase connection test result:", { data, error });
     
     // Check if the connection is successful

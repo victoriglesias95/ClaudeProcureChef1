@@ -1,3 +1,4 @@
+// src/components/layout/MainLayout.tsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,7 +9,7 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   
   // Helper function to determine if a link is active
   const isActive = (path: string) => {
@@ -37,7 +38,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">John Doe</span>
+            <span className="text-sm text-gray-600">{user?.name || user?.email}</span>
             <button 
               onClick={handleLogout}
               className="text-sm text-gray-600 hover:text-gray-900"

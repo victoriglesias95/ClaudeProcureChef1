@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Requests from './pages/Requests';
@@ -9,15 +9,33 @@ import ProductQuoteComparison from './pages/ProductQuoteComparison';
 import Orders from './pages/Orders';
 import Suppliers from './pages/Suppliers';
 import RequestDetails from './pages/RequestDetails';
-import QuoteDetails from './pages/QuotesDetails'; // NEW IMPORT
+import QuoteDetails from './pages/QuotesDetails';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Admin from './pages/Admin';
 
-function App() {
+// Loading screen component
+const LoadingScreen = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="text-center">
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+      <p className="mt-2 text-gray-700">Loading authentication...</p>
+    </div>
+  </div>
+);
+
+// App content with loading state handled
+const AppContent = () => {
+  const { isLoading, isAuthenticated } = useAuth();
+  
+  // Show loading screen only during initial auth check
+  if (isLoading && !isAuthenticated) {
+    return <LoadingScreen />;
+  }
+  
   return (
-    <AuthProvider>
+    <>
       <Toaster position="top-right" />
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -29,7 +47,7 @@ function App() {
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/quotes" element={<Quotes />} />
-          <Route path="/quotes/:id" element={<QuoteDetails />} /> {/* NEW ROUTE */}
+          <Route path="/quotes/:id" element={<QuoteDetails />} />
           <Route path="/quote-comparison" element={<ProductQuoteComparison />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/suppliers" element={<Suppliers />} />
@@ -40,6 +58,14 @@ function App() {
         {/* Catch all route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+    </>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
