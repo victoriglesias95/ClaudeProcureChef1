@@ -1,5 +1,5 @@
 // src/pages/Login.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '../components/ui/Card';
@@ -10,8 +10,17 @@ const Login = (): JSX.Element => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn } = useAuth();
+  const { signIn, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Use effect to handle navigation AFTER auth state updates
+  useEffect(() => {
+    console.log("Login component - checking authentication state:", isAuthenticated);
+    if (isAuthenticated) {
+      console.log("Login detected authenticated state, navigating to dashboard");
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +30,9 @@ const Login = (): JSX.Element => {
     try {
       console.log("Login form submission with email:", email);
       await signIn(email, password);
-      console.log("Sign in successful, navigating to dashboard");
-      navigate('/');
+      console.log("Sign in API call completed successfully");
+      // DO NOT navigate here - let the useEffect handle it
+      // The navigation will happen after auth state is fully updated
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to sign in. Please check your credentials.');

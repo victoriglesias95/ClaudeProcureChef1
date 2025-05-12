@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Admin from './pages/Admin';
+import { useEffect } from 'react';
 
 // Loading screen component
 const LoadingScreen = () => (
@@ -27,10 +28,21 @@ const LoadingScreen = () => (
 
 // App content with loading state handled
 const AppContent = () => {
-  const { isLoading, isAuthenticated } = useAuth();
+  const auth = useAuth();
   
-  // Show loading screen only during initial auth check
-  if (isLoading) {
+  // Log auth state for debugging
+  useEffect(() => {
+    console.log('AppContent rendering with auth state:', { 
+      isAuthenticated: auth.isAuthenticated, 
+      isLoading: auth.isLoading,
+      hasUser: auth.user ? true : false,
+      userEmail: auth.user?.email,
+      userRole: auth.user?.role
+    });
+  });
+
+  // Show loading screen during initial auth check
+  if (auth.isLoading) {
     return <LoadingScreen />;
   }
   

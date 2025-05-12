@@ -1,3 +1,4 @@
+// src/pages/Admin.tsx
 import { useState, FormEvent } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
@@ -204,6 +205,46 @@ const Admin = () => {
     } catch (error) {
       console.error('Error checking session:', error);
       toast.error('Error checking session');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add the user role fixing function here
+  const fixUserRoles = async () => {
+    try {
+      setLoading(true);
+      
+      // Get all users without roles
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email')
+        .is('role', null);
+        
+      if (error) {
+        toast.error('Error checking users: ' + error.message);
+        return;
+      }
+      
+      if (!data || data.length === 0) {
+        toast.success('No users with missing roles found');
+        return;
+      }
+      
+      // Update all users without roles
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ role: 'admin' })
+        .is('role', null);
+        
+      if (updateError) {
+        toast.error('Error fixing user roles: ' + updateError.message);
+      } else {
+        toast.success(`Fixed roles for ${data.length} users`);
+      }
+    } catch (error) {
+      console.error('Error fixing user roles:', error);
+      toast.error('Failed to fix user roles');
     } finally {
       setLoading(false);
     }
@@ -417,6 +458,29 @@ const Admin = () => {
                 )}
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add User Role Fix card */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>User Role Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-medium mb-2">Fix Missing User Roles</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Some users might be missing a role value, which can cause authentication issues.
+              This tool will update all users with missing roles to have the 'admin' role.
+            </p>
+            <Button 
+              onClick={fixUserRoles}
+              isLoading={loading}
+              variant="primary"
+            >
+              Fix Missing User Roles
+            </Button>
           </div>
         </CardContent>
       </Card>

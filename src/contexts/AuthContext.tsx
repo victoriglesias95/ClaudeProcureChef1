@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../services/supabase';
 
-// Define the User type
+// Define types
 type User = {
   id: string;
   email: string;
@@ -10,7 +10,6 @@ type User = {
   name?: string;
 };
 
-// Define the context type
 type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
@@ -19,198 +18,220 @@ type AuthContextType = {
   signOut: () => Promise<void>;
 };
 
-// Create the context with a default value
-export const AuthContext = createContext<AuthContextType | null>(null);
+// Create context
+const AuthContext = createContext<AuthContextType | null>(null);
 
-// Hook for using the auth context
-export const useAuth = (): AuthContextType => {
+// Hook for using auth context
+const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
+    console.error('useAuth must be used within an AuthProvider');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-// Props type for the provider
-type AuthProviderProps = {
-  children: ReactNode;
-};
-
-// The Auth Provider component
-export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
+// Auth Provider component
+const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on mount
+  // Debug log state changes
   useEffect(() => {
+    console.log("[AUTH:Debug] Auth state:", { 
+      isAuthenticated, 
+      isLoading, 
+      hasUser: !!user,
+      userEmail: user?.email,
+      userRole: user?.role
+    });
+  }, [user, isAuthenticated, isLoading]);
+
+  // Function to create a standardized user record
+  const createUserRecord = async (userId: string, email: string | undefined) => {
+    // CRITICAL: Always ensure role is set to a valid value
+    const newUser = {
+      id: userId,
+      email: email || '',
+      role: 'admin' as const, // Default role
+      name: 'User'
+    };
+    
+    console.log("[AUTH:createUser] Creating user record:", newUser);
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .insert(newUser);
+        
+      if (error) {
+        console.error("[AUTH:error] Failed to create user record:", error);
+        // Still return the user object even if DB insert failed
+      }
+      
+      return newUser;
+    } catch (error) {
+      console.error("[AUTH:error] Exception creating user record:", error);
+      return newUser;
+    }
+  };
+
+  // Function to get or create user from DB
+  const getUserFromDB = async (userId: string, email: string | undefined): Promise<User> => {
+    try {
+      console.log("[AUTH:getUser] Fetching user data for:", userId);
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, role, name')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.warn("[AUTH:getUser] Error fetching user:", error);
+        // Create user if not found
+        return await createUserRecord(userId, email);
+      }
+      
+      if (!data) {
+        console.warn("[AUTH:getUser] User not found in database");
+        // Create user if not found
+        return await createUserRecord(userId, email);
+      }
+      
+      // Verify role exists and is valid
+      if (!data.role) {
+        console.warn("[AUTH:getUser] User missing role, setting default role");
+        data.role = 'admin';
+        
+        // Update the user record with the role
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ role: 'admin' })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error("[AUTH:error] Failed to update user role:", updateError);
+        }
+      }
+      
+      console.log("[AUTH:getUser] User data retrieved:", data);
+      return data as User;
+    } catch (error) {
+      console.error("[AUTH:error] Exception in getUserFromDB:", error);
+      // Return fallback user
+      return {
+        id: userId,
+        email: email || '',
+        role: 'admin',
+        name: 'User'
+      };
+    }
+  };
+
+  useEffect(() => {
+    // Initial session check
     const checkSession = async () => {
       try {
-        console.log("Checking session...");
-        // Get session from Supabase
-        const { data, error: sessionError } = await supabase.auth.getSession();
+        console.log("[AUTH:init] Checking initial session");
+        const { data, error } = await supabase.auth.getSession();
         
-        console.log("Session response received:", !!data?.session);
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
+        if (error) {
+          console.error("[AUTH:error] Session check error:", error);
           setIsLoading(false);
           return;
         }
         
         if (data?.session) {
-          // Get user details from users table
-          try {
-            const { data: userData, error: userError } = await supabase
-              .from('users')
-              .select('id, email, role, name')
-              .eq('id', data.session.user.id)
-              .single();
-            
-            console.log("User data query executed");
-            
-            if (userError) {
-              console.error("User data error:", userError);
-              setIsLoading(false);
-              return;
-            }
-            
-            if (userData) {
-              console.log("Setting user data:", userData);
-              setUser(userData);
-              console.log('Setting isAuthenticated = true');
-    setIsAuthenticated(true);
-            } else {
-              console.warn("No user data found in the users table");
-              // Auto-create a user record if it doesn't exist
-              try {
-                const newUser = {
-                  id: data.session.user.id,
-                  email: data.session.user.email,
-                  role: 'admin', // Default role
-                  name: 'User'
-                };
-                
-                const { error: createError } = await supabase
-                  .from('users')
-                  .insert(newUser);
-                
-                if (createError) {
-                  console.error("Error creating user record:", createError);
-                } else {
-                  console.log("Created missing user record");
-                  setUser(newUser as User);
-                  console.log('Setting isAuthenticated = true');
-    setIsAuthenticated(true);
-                }
-              } catch (createError) {
-                console.error("Failed to create user record:", createError);
-              }
-            }
-          } catch (userDataError) {
-            console.error("Error in user data fetch:", userDataError);
+          console.log("[AUTH:session] Found existing session");
+          // Get or create user
+          const userData = await getUserFromDB(
+            data.session.user.id, 
+            data.session.user.email
+          );
+          
+          // CRITICAL: Always ensure userData has a role
+          if (!userData.role) {
+            userData.role = 'admin';
           }
+          
+          setUser(userData);
+          setIsAuthenticated(true);
         } else {
-          console.log("No active session found");
+          console.log("[AUTH:session] No active session");
+          setUser(null);
+          setIsAuthenticated(false);
         }
-        
-        console.log("About to finish checkSession, isLoading will be set to false");
       } catch (error) {
-        console.error('Session check error:', error);
+        console.error("[AUTH:error] Session check failed:", error);
       } finally {
-        console.log("Setting isLoading to false in finally block");
         setIsLoading(false);
       }
     };
     
-    // Setup auth state change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change event:", event, "Session:", !!session);
-      
-      if (event === 'SIGNED_IN' && session) {
-        setIsLoading(true);
-        try {
-          console.log("User signed in, fetching user data...");
-          // Get user details from users table
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id, email, role, name')
-            .eq('id', session.user.id)
-            .single();
+    // Setup auth listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`[AUTH:event] ${event}`, { hasSession: !!session });
+        
+        if (event === 'SIGNED_IN' && session) {
+          setIsLoading(true);
           
-          if (userError) {
-            console.error("User data error on auth change:", userError);
-            setIsLoading(false);
-            return;
-          }
-          
-          console.log("User data on auth change:", userData);
-          
-          if (userData) {
-            setUser(userData);
-            console.log('Setting isAuthenticated = true');
-    setIsAuthenticated(true);
-          } else {
-            console.warn("No user record found for authenticated user");
-            // Auto-create a user record if it doesn't exist
-            try {
-              const newUser = {
-                id: session.user.id,
-                email: session.user.email,
-                role: 'admin', // Default role
-                name: 'User'
-              };
-              
-              const { error: createError } = await supabase
-                .from('users')
-                .insert(newUser);
-              
-              if (createError) {
-                console.error("Error creating user record:", createError);
-              } else {
-                console.log("Created missing user record");
-                setUser(newUser as User);
-                console.log('Setting isAuthenticated = true');
-    setIsAuthenticated(true);
-              }
-            } catch (createError) {
-              console.error("Failed to create user record:", createError);
+          try {
+            // Get or create user
+            const userData = await getUserFromDB(
+              session.user.id, 
+              session.user.email
+            );
+            
+            // CRITICAL: Always ensure userData has a role
+            if (!userData.role) {
+              userData.role = 'admin';
             }
+            
+            setUser(userData);
+            setIsAuthenticated(true);
+          } catch (error) {
+            console.error("[AUTH:error] Error handling sign in:", error);
+            // Fallback user
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              role: 'admin',
+              name: 'User'
+            });
+            setIsAuthenticated(true);
+          } finally {
+            setIsLoading(false);
           }
-        } catch (error) {
-          console.error("Error fetching user data on auth change:", error);
-        } finally {
-          console.log("Setting isLoading to false after auth change");
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setIsAuthenticated(false);
           setIsLoading(false);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setIsAuthenticated(false);
-        setIsLoading(false);
       }
-    });
+    );
     
-    // Run initial session check
+    // Run initial check
     checkSession();
     
-    // Safety timeout to prevent infinite loading
-    const safetyTimeout = setTimeout(() => {
-      console.log("Safety timeout triggered after 5 seconds");
+    // Safety timeout
+    const timeout = setTimeout(() => {
+      console.log("[AUTH:timeout] Safety timeout triggered");
       setIsLoading(false);
     }, 5000);
     
-    // Cleanup listener on unmount
     return () => {
       authListener.subscription.unsubscribe();
-      clearTimeout(safetyTimeout);
+      clearTimeout(timeout);
     };
   }, []);
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
+    console.log("[AUTH:signIn] Attempting sign in with:", email);
     try {
       setIsLoading(true);
-      console.log("Attempting sign in with:", email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -218,73 +239,49 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
       });
       
       if (error) {
-        console.error('Sign-in error:', error);
+        console.error("[AUTH:error] Sign-in failed:", error);
         throw error;
       }
       
-      console.log("Sign in successful, user:", data.user);
+      console.log("[AUTH:signIn] Sign in successful, data:", data.user?.id);
       
       if (data.user) {
-        // Get user details from users table
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, email, role, name')
-          .eq('id', data.user.id)
-          .single();
+        // Get or create user
+        const userData = await getUserFromDB(
+          data.user.id, 
+          data.user.email
+        );
         
-        if (userError) {
-          console.error('User data fetch error:', userError);
-          
-          // Auto-create a user record if it doesn't exist
-          try {
-            const newUser = {
-              id: data.user.id,
-              email: data.user.email,
-              role: 'admin', // Default role
-              name: 'User'
-            };
-            
-            const { error: createError } = await supabase
-              .from('users')
-              .insert(newUser);
-            
-            if (createError) {
-              console.error("Error creating user record:", createError);
-            } else {
-              console.log("Created missing user record");
-              setUser(newUser as User);
-              console.log('Setting isAuthenticated = true');
-    setIsAuthenticated(true);
-            }
-          } catch (createError) {
-            console.error("Failed to create user record:", createError);
-            throw createError;
-          }
-        } else if (userData) {
-          console.log("User data after sign in:", userData);
-          setUser(userData);
-          console.log('Setting isAuthenticated = true');
-    setIsAuthenticated(true);
+        // CRITICAL: Always ensure userData has a role
+        if (!userData.role) {
+          userData.role = 'admin';
         }
+        
+        console.log("[AUTH:signIn] Setting authenticated state with user:", userData);
+        setUser(userData);
+        setIsAuthenticated(true);
       }
     } catch (error) {
-      console.error('Sign-in process error:', error);
+      console.error("[AUTH:error] Sign-in process failed:", error);
       throw error;
     } finally {
-      console.log("Setting isLoading to false after sign in");
       setIsLoading(false);
     }
   };
 
   // Sign out function
   const signOut = async () => {
+    console.log("[AUTH:signOut] Signing out");
     try {
       setIsLoading(true);
       await supabase.auth.signOut();
       setUser(null);
       setIsAuthenticated(false);
     } catch (error) {
-      console.error('Sign-out error:', error);
+      console.error("[AUTH:error] Sign-out failed:", error);
+      // Force state reset even if sign-out fails
+      setUser(null);
+      setIsAuthenticated(false);
       throw error;
     } finally {
       setIsLoading(false);
@@ -299,7 +296,6 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     signOut
   };
 
-  // ONLY CHANGE: Remove UI rendering logic from the provider
   return (
     <AuthContext.Provider value={value}>
       {children}
@@ -307,5 +303,6 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   );
 };
 
-// Add this for backward compatibility with any code importing the default export
+// Export
+export { AuthContext, useAuth, AuthProvider };
 export default AuthContext;
