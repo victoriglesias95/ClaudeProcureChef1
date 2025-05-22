@@ -1,4 +1,4 @@
-// src/pages/Quotes.tsx - UPDATED IMPORTS
+// src/pages/Quotes.tsx - PERFORMANCE IMPROVED
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -51,9 +51,9 @@ const Quotes = () => {
   useEffect(() => {
     loadData();
     
-    // Set up a refresh interval for development purposes
-    // This simulates real-time updates to quote statuses
-    const intervalId = setInterval(loadData, 5000);
+    // PERFORMANCE IMPROVED: Reduced polling from 5 seconds to 30 seconds
+    // This reduces server load and improves user experience
+    const intervalId = setInterval(loadData, 30000); // Changed from 5000 to 30000
     return () => clearInterval(intervalId);
   }, []);
 

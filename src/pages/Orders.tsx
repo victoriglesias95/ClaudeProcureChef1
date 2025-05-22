@@ -1,9 +1,11 @@
+// src/pages/Orders.tsx - WITH RECEIVING INTEGRATION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import ReceiveOrderForm from '../components/receiver/ReceiveOrderForm';
 import { getOrders, updateOrderStatus } from '../services/orders';
 import { Order } from '../types/quote';
 
@@ -11,20 +13,24 @@ const Orders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // NEW: State for receiving modal
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+  const [orderToReceive, setOrderToReceive] = useState<Order | null>(null);
+
+  const loadOrders = async () => {
+    try {
+      const data = await getOrders();
+      setOrders(data);
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        const data = await getOrders();
-        setOrders(data);
-      } catch (error) {
-        console.error('Failed to load orders:', error);
-        toast.error('Failed to load orders');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadOrders();
   }, []);
 
@@ -72,8 +78,7 @@ const Orders = () => {
       if (success) {
         toast.success('Order submitted successfully');
         // Reload orders to show updated status
-        const data = await getOrders();
-        setOrders(data);
+        loadOrders();
       } else {
         toast.error('Failed to submit order');
       }
@@ -81,6 +86,25 @@ const Orders = () => {
       console.error('Error submitting order:', error);
       toast.error('Failed to submit order');
     }
+  };
+
+  // NEW: Handle receiving order
+  const handleReceiveOrder = (order: Order) => {
+    setOrderToReceive(order);
+    setIsReceiveModalOpen(true);
+  };
+
+  // NEW: Handle order received successfully
+  const handleOrderReceived = () => {
+    // Reload orders to show updated status
+    loadOrders();
+    setOrderToReceive(null);
+  };
+
+  // NEW: Close receiving modal
+  const handleCloseReceiveModal = () => {
+    setIsReceiveModalOpen(false);
+    setOrderToReceive(null);
   };
 
   return (
@@ -171,7 +195,7 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons - ENHANCED */}
                 <div className="flex justify-end items-center mt-4 pt-4 border-t">
                   <div className="space-x-2">
                     <Button 
@@ -181,6 +205,8 @@ const Orders = () => {
                     >
                       View Details
                     </Button>
+                    
+                    {/* Submit Order Button */}
                     {order.status === 'draft' && (
                       <Button 
                         size="sm" 
@@ -190,6 +216,24 @@ const Orders = () => {
                         Submit Order
                       </Button>
                     )}
+                    
+                    {/* NEW: Receive Order Button */}
+                    {(order.status === 'submitted' || order.status === 'confirmed' || order.status === 'shipped') && (
+                      <Button 
+                        size="sm" 
+                        variant="success"
+                        onClick={() => handleReceiveOrder(order)}
+                      >
+                        Receive Order
+                      </Button>
+                    )}
+                    
+                    {/* Order Status Indicator */}
+                    {order.status === 'delivered' && (
+                      <span className="text-sm text-green-600 font-medium">
+                        ✅ Received
+                      </span>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -197,6 +241,14 @@ const Orders = () => {
           ))}
         </div>
       )}
+
+      {/* NEW: Receive Order Modal */}
+      <ReceiveOrderForm
+        isOpen={isReceiveModalOpen}
+        onClose={handleCloseReceiveModal}
+        order={orderToReceive}
+        onOrderReceived={handleOrderReceived}
+      />
     </MainLayout>
   );
 };

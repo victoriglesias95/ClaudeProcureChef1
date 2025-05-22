@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.tsx
+// src/contexts/AuthContext.tsx - SECURITY FIXED
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '../services/supabase';
 
@@ -25,7 +25,6 @@ type AuthContextType = {
 };
 
 // ======= Create Context =======
-// CHANGED: Named export instead of default export
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 // ======= Custom Hook =======
@@ -80,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     };
   }, [authState, user, isLoading, isAuthenticated, error]);
 
-  // ENHANCED: Function to create a user record if it doesn't exist
+  // SECURITY FIXED: Function to create a user record if it doesn't exist
   const ensureUserRecord = async (userId: string, email: string | undefined): Promise<User> => {
     try {
       console.log('[Auth] Ensuring user record exists for:', userId);
@@ -103,11 +102,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   
         if (fetchError) {
           console.log('[Auth] Creating new user record in database');
-          // User record doesn't exist, create one with default role
+          // SECURITY FIXED: Default to chef role instead of admin
           const newUser: User = {
             id: userId,
             email: email || '',
-            role: 'admin' as UserRole, // Add type assertion here too
+            role: 'chef' as UserRole, // FIXED: Default to least privileged role
             name: 'User'
           };
   
@@ -126,14 +125,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   
         console.log('[Auth] Found existing user record:', existingUser);
         
-        // Ensure role is valid, update if not
+        // SECURITY FIXED: Ensure role is valid, update if not
         if (!existingUser.role) {
           console.log('[Auth] User missing role, setting default role');
-          const updatedUser = { ...existingUser, role: 'admin' as UserRole };
+          const updatedUser = { ...existingUser, role: 'chef' as UserRole }; // FIXED: Default to chef
           
           await supabase
             .from('users')
-            .update({ role: 'admin' })
+            .update({ role: 'chef' }) // FIXED: Default to chef
             .eq('id', userId);
 
           return updatedUser;
@@ -147,11 +146,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     } catch (err) {
       console.error('[Auth] Error in ensureUserRecord:', err);
       
-      // CRITICAL: Return a fallback user even on error
+      // SECURITY FIXED: Return a fallback user with chef role
       const fallbackUser = {
       id: userId,
       email: email || '',
-      role: 'admin' as UserRole,  // Add type assertion
+      role: 'chef' as UserRole,  // FIXED: Default to chef role
       name: 'User (Fallback)'
       };
       
@@ -387,5 +386,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     </AuthContext.Provider>
   );
 };
-
-// NO default export here - use named exports only

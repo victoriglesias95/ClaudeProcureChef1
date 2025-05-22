@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { Product, InventoryItem } from '../types/product';
 
 /**
- * Fetch all products from database
+ * Fetch basic products (no inventory data)
  */
 export async function getProducts(): Promise<Product[]> {
   try {
@@ -47,7 +47,7 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 /**
- * Fetch products with inventory data using proper join
+ * Fetch products WITH inventory data using proper join
  */
 export async function getInventoryItems(): Promise<InventoryItem[]> {
   try {
@@ -215,5 +215,56 @@ export async function deleteProduct(id: string): Promise<boolean> {
   } catch (error) {
     console.error(`Error deleting product ${id}:`, error);
     return false;
+  }
+}
+
+/**
+ * Search products by name or category
+ */
+export async function searchProducts(searchTerm: string): Promise<InventoryItem[]> {
+  if (!searchTerm.trim()) {
+    return getInventoryItems();
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        description,
+        category,
+        default_unit,
+        created_at,
+        inventory!inner (
+          stock_level,
+          current_stock,
+          last_updated,
+          last_counted_at
+        )
+      `)
+      .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`)
+      .order('name');
+    
+    if (error) {
+      console.error('Error searching products:', error);
+      return [];
+    }
+    
+    return data?.map((product: any) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      default_unit: product.default_unit,
+      created_at: product.created_at,
+      stock_level: product.inventory.stock_level || 'medium',
+      current_stock: product.inventory.current_stock || 0,
+      last_updated: product.inventory.last_updated || new Date().toISOString(),
+      last_counted_at: product.inventory.last_counted_at
+    })) || [];
+  } catch (error) {
+    console.error('Error searching products:', error);
+    return [];
   }
 }

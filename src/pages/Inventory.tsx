@@ -12,19 +12,9 @@ import RequestSubmissionModal from '../components/requests/RequestSubmissionModa
 import CountModal from '../components/inventory/CountModal';
 import { getProductsByCategory } from '../services/products';
 import { updateInventoryCount } from '../services/inventory';
+import { supabase } from '../services/supabase';
 import type { InventoryItem } from '../types/product';
 import { ProductCategory } from '../types/product';
-
-// Simple pricing for display (in production, this would come from supplier data)
-const mockCategoryPrices: Record<string, {price: number, originalPrice?: number}> = {
-  'Vegetables': {price: 12.99, originalPrice: 16.50},
-  'Meat': {price: 25.99, originalPrice: 32.99},
-  'Dairy': {price: 8.99},
-  'Seafood': {price: 34.99, originalPrice: 42.50},
-  'Grains': {price: 6.99},
-  'Baking': {price: 9.99, originalPrice: 11.99},
-  'Oils': {price: 15.99},
-};
 
 const Inventory = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -34,26 +24,22 @@ const Inventory = () => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isCountModalOpen, setIsCountModalOpen] = useState(false);
+  const [productPrices, setProductPrices] = useState<Record<string, number>>({});
   const [cartItems, setCartItems] = useState<Map<string, {
-    quantity: number, 
-    price: number, 
-    name: string,
-    currentStock?: number,
-    stockLevel?: 'low' | 'medium' | 'high'
+    quantity: number; 
+    price: number; 
+    name: string;
+    currentStock?: number;
+    stockLevel?: 'low' | 'medium' | 'high';
   }>>(new Map());
 
   const loadInventoryData = async () => {
     try {
-      console.log("Loading inventory data from database...");
-      const groupedProducts = await getProductsByCategory();
-      console.log("Loaded products from database:", groupedProducts);
+      console.log("Loading inventory data...");
+      setLoading(true);
       
-      if (Object.keys(groupedProducts).length === 0) {
-        console.warn('No inventory data found - check database setup');
-        toast.error('No inventory data found. Please check database setup in Admin panel.');
-        setLoading(false);
-        return;
-      }
+      const groupedProducts = await getProductsByCategory();
+      console.log("Loaded products:", groupedProducts);
       
       const categoryList = Object.keys(groupedProducts).map(name => ({
         name,
@@ -62,15 +48,47 @@ const Inventory = () => {
       
       setCategories(categoryList);
       
-      // Set first category as active if there are categories
+      // Load prices for all products from database
+      await loadProductPrices();
+      
       if (categoryList.length > 0 && !activeCategory) {
         setActiveCategory(categoryList[0].name);
       }
     } catch (error) {
       console.error('Failed to load inventory:', error);
-      toast.error('Failed to load inventory items. Please check your database connection.');
+      toast.error('Failed to load inventory items');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load actual prices from database instead of mock data
+  const loadProductPrices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('supplier_products')
+        .select(`
+          product_id,
+          price,
+          supplier:supplier_id(name)
+        `)
+        .eq('available', true);
+      
+      if (error) throw error;
+      
+      // Get the best (lowest) price for each product
+      const prices: Record<string, number> = {};
+      data?.forEach(item => {
+        const currentPrice = prices[item.product_id];
+        if (!currentPrice || item.price < currentPrice) {
+          prices[item.product_id] = item.price;
+        }
+      });
+      
+      setProductPrices(prices);
+    } catch (error) {
+      console.error('Failed to load product prices:', error);
+      toast.error('Failed to load product prices');
     }
   };
 
@@ -86,32 +104,26 @@ const Inventory = () => {
     )
   })).filter(category => category.items.length > 0);
 
-  // Get the items for the active category
   const activeItems = activeCategory 
-    ? filteredCategories.find(c => c.name === activeCategory)?.items || []
+    ? categories.find(c => c.name === activeCategory)?.items || []
     : [];
     
   const handleAddToRequest = (productId: string, quantity: number) => {
     const newCartItems = new Map(cartItems);
     
-    // Find the product from the categories
     let product: InventoryItem | undefined;
     for (const category of categories) {
       product = category.items.find(item => item.id === productId);
       if (product) break;
     }
     
-    if (!product) {
-      console.error(`Product ${productId} not found in categories`);
-      return;
-    }
+    if (!product) return;
     
     if (quantity === 0) {
       newCartItems.delete(productId);
     } else {
-      // Use the category to get the display price (this would come from suppliers in production)
-      const categoryName = product.category;
-      const { price } = mockCategoryPrices[categoryName] || { price: 10.99 };
+      // Use actual database price instead of mock price
+      const price = productPrices[productId] || 0;
       
       newCartItems.set(productId, {
         quantity,
@@ -129,73 +141,27 @@ const Inventory = () => {
   const totalPrice = [...cartItems.values()].reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handleCreateRequest = () => {
-    if (cartItems.size === 0) {
-      toast.error('Please add items to your cart first');
-      return;
-    }
-    // Open the request submission modal
     setIsRequestModalOpen(true);
   };
   
   const handleRequestSubmitted = () => {
-    // Clear the cart after successful submission
     setCartItems(new Map());
-    // Reload inventory to refresh stock levels
-    loadInventoryData();
   };
 
   const handleStartCount = () => {
-    if (activeItems.length === 0) {
-      toast.error('No items available for counting in the selected category');
-      return;
-    }
     setIsCountModalOpen(true);
   };
   
   const handleSubmitCount = async (counts: Record<string, number>) => {
     try {
-      const success = await updateInventoryCount(counts);
-      if (success) {
-        toast.success('Inventory count updated successfully');
-        // Reload inventory data after count is updated
-        await loadInventoryData();
-      } else {
-        toast.error('Failed to update inventory count');
-      }
+      await updateInventoryCount(counts);
+      await loadInventoryData();
+      toast.success('Inventory count updated successfully');
     } catch (error) {
       console.error('Error updating inventory count:', error);
       toast.error('Failed to update inventory count');
     }
   };
-
-  // Show database setup message if no data
-  if (!loading && categories.length === 0) {
-    return (
-      <MainLayout>
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
-            <p className="text-gray-600">Find and request ingredients</p>
-          </div>
-        </div>
-        
-        <div className="text-center py-12">
-          <div className="max-w-md mx-auto">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">No Inventory Data Found</h2>
-            <p className="text-gray-600 mb-6">
-              It looks like your database hasn't been set up yet. Please use the Admin panel to initialize your inventory data.
-            </p>
-            <Button 
-              variant="primary" 
-              onClick={() => window.location.href = '/admin'}
-            >
-              Go to Admin Panel
-            </Button>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
@@ -207,13 +173,11 @@ const Inventory = () => {
         <Button 
           variant="primary"
           onClick={handleStartCount}
-          disabled={loading || categories.length === 0}
         >
           Start Count
         </Button>
       </div>
       
-      {/* Search Bar */}
       <div className="mb-6 flex gap-2">
         <SearchBar 
           value={searchTerm}
@@ -231,7 +195,6 @@ const Inventory = () => {
         </button>
       </div>
       
-      {/* Category chips */}
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
         {filteredCategories.map(category => (
           <CategoryChip
@@ -247,47 +210,34 @@ const Inventory = () => {
         <div className="text-center py-8">Loading inventory...</div>
       ) : (
         <div>
-          {/* Section header */}
           <SectionHeader 
-            title={`${activeCategory || 'All Products'}${activeItems.length > 0 ? ` (${activeItems.length})` : ''}`}
+            title={activeCategory || 'All Products'} 
+            onViewMore={() => console.log('View more products')}
           />
           
-          {/* Product grid */}
-          {activeItems.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No items found in this category.</p>
-              {searchTerm && (
-                <p className="text-gray-400 mt-2">Try adjusting your search term.</p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {activeItems.map((item) => {
-                // Get price info based on category
-                const categoryName = item.category;
-                const priceInfo = mockCategoryPrices[categoryName] || { price: 12.99 };
-                
-                return (
-                  <ProductCard
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    price={priceInfo.price}
-                    originalPrice={item.stock_level === 'low' ? priceInfo.originalPrice : undefined}
-                    unit={item.default_unit}
-                    stockLevel={item.stock_level}
-                    currentStock={item.current_stock}
-                    lastCountedAt={item.last_counted_at}
-                    onAddToRequest={(id, quantity) => handleAddToRequest(id, quantity)}
-                  />
-                );
-              })}
-            </div>
-          )}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {activeItems.map((item) => {
+              // Use actual database price instead of mock price
+              const price = productPrices[item.id] || 0;
+              
+              return (
+                <ProductCard
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  price={price}
+                  unit={`${item.default_unit}`}
+                  stockLevel={item.stock_level}
+                  currentStock={item.current_stock}
+                  lastCountedAt={item.last_counted_at}
+                  onAddToRequest={(id, quantity) => handleAddToRequest(id, quantity)}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
       
-      {/* Cart summary button */}
       {totalItems > 0 && (
         <CartButton
           totalItems={totalItems}
@@ -296,7 +246,6 @@ const Inventory = () => {
         />
       )}
       
-      {/* Category browser modal */}
       <CategoryBrowser
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
@@ -305,7 +254,6 @@ const Inventory = () => {
         title="Food Categories"
       />
       
-      {/* Request submission modal */}
       <RequestSubmissionModal
         isOpen={isRequestModalOpen}
         onClose={() => setIsRequestModalOpen(false)}
@@ -314,7 +262,6 @@ const Inventory = () => {
         onRequestSubmitted={handleRequestSubmitted}
       />
       
-      {/* Inventory count modal */}
       <CountModal
         isOpen={isCountModalOpen}
         onClose={() => setIsCountModalOpen(false)}
