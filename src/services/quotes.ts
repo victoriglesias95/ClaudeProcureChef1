@@ -759,3 +759,54 @@ export async function receiveOrder(
     return false;
   }
 }
+
+// Create a new supplier
+export async function createSupplier(supplierData: Omit<Supplier, 'id'>): Promise<Supplier> {
+  try {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .insert(supplierData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating supplier:', error);
+    throw error;
+  }
+}
+
+// Update a supplier
+export async function updateSupplier(id: string, supplierData: Partial<Supplier>): Promise<Supplier> {
+  try {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .update(supplierData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating supplier:', error);
+    throw error;
+  }
+}
+
+// Delete a supplier
+export async function deleteSupplier(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('suppliers')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting supplier:', error);
+    throw error;
+  }
+}

@@ -8,6 +8,7 @@ import Quotes from './pages/Quotes';
 import ProductQuoteComparison from './pages/ProductQuoteComparison';
 import Orders from './pages/Orders';
 import Suppliers from './pages/Suppliers';
+import ProductList from './pages/ProductList';
 import RequestDetails from './pages/RequestDetails';
 import QuoteDetails from './pages/QuotesDetails';
 import Login from './pages/Login';
@@ -63,6 +64,7 @@ const AppContent = () => {
           <Route path="/quote-comparison" element={<ProductQuoteComparison />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/products" element={<ProductList />} />
           <Route path="/requests/:id" element={<RequestDetails />} />
           <Route path="/admin" element={<Admin />} />
         </Route>

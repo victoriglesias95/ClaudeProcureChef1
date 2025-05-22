@@ -71,6 +71,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <Link to="/suppliers" className={getLinkClasses('/suppliers')}>
                 Suppliers
               </Link>
+              <Link to="/products" className={getLinkClasses('/products')}>
+                Products
+              </Link>
+              <Link to="/admin" className={getLinkClasses('/admin')}>
+                Admin
+              </Link>
             </div>
           </nav>
         </aside>

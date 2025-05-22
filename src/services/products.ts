@@ -31,6 +31,87 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
+// Create a new product
+export async function createProduct(productData: Omit<Product, 'id' | 'created_at'>): Promise<Product> {
+  if (USE_MOCK_DATA) {
+    // For mock mode, simulate product creation
+    const newProduct: Product = {
+      id: `p-${Date.now()}`,
+      ...productData,
+      created_at: new Date().toISOString()
+    };
+    return newProduct;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .insert({
+        ...productData,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating product:', error);
+    throw error;
+  }
+}
+
+// Update a product
+export async function updateProduct(id: string, productData: Partial<Product>): Promise<Product> {
+  if (USE_MOCK_DATA) {
+    // For mock mode, simulate update
+    const existingProduct = mockProducts.find(p => p.id === id);
+    if (!existingProduct) throw new Error('Product not found');
+    
+    const updatedProduct = {
+      ...existingProduct,
+      ...productData
+    };
+    return updatedProduct;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update(productData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating product:', error);
+    throw error;
+  }
+}
+
+// Delete a product
+export async function deleteProduct(id: string): Promise<boolean> {
+  if (USE_MOCK_DATA) {
+    // For mock mode, simulate deletion
+    return true;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    throw error;
+  }
+}
+
 // Fetch products with inventory data
 export async function getInventoryItems(): Promise<InventoryItem[]> {
   if (USE_MOCK_DATA) {
@@ -48,6 +129,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
         category,
         default_unit,
         created_at,
+        sku,
         inventory (
           stock_level,
           current_stock,
@@ -69,6 +151,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       category: product.category,
       default_unit: product.default_unit,
       created_at: product.created_at,
+      sku: product.sku,
       stock_level: product.inventory?.[0]?.stock_level || 'medium',
       current_stock: product.inventory?.[0]?.current_stock || 0,
       last_updated: product.inventory?.[0]?.last_updated || new Date().toISOString(),
