@@ -1,7 +1,7 @@
-// src/components/layout/MainLayout.tsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import MobileNavigation from './MobileNavigation';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -11,12 +11,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   
-  // Helper function to determine if a link is active
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path: string) => location.pathname === path;
   
-  // Helper function to get link classes
   const getLinkClasses = (path: string) => {
     const baseClasses = "block px-3 py-2 rounded-md";
     return isActive(path) 
@@ -30,6 +26,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background-off">
+      {/* Mobile Navigation */}
+      <MobileNavigation />
+      
+      {/* Desktop Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="px-4 h-16 flex items-center justify-between">
           <div className="flex items-center">
@@ -50,6 +50,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </header>
       
       <div className="flex">
+        {/* Desktop Sidebar */}
         <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)] hidden md:block">
           <nav className="p-4">
             <div className="space-y-1">
@@ -81,7 +82,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </nav>
         </aside>
         
-        <main className="flex-1 p-6">
+        {/* Main Content */}
+        <main className="flex-1 p-6 container-mobile">
           {children}
         </main>
       </div>
