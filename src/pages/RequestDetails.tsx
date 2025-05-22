@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import Button from '../components/ui/Button';
 import StatusBadge from '../components/ui/StatusBadge';
 import SupplierSelectionModal from '../components/quotes/SupplierSelectionModal';
-import { getRequestById } from '../services/requests';
-import { createQuoteRequestsForSuppliers, getSuppliers } from '../services/quotes';
+import { getRequestById, approveRequest, rejectRequest } from '../services/requests';
+import { createQuoteRequestsForSuppliers } from '../services/quote-requests';
+import { getSuppliers } from '../services/suppliers';
 import { Request } from '../types/request';
 import { Supplier } from '../types/quote';
 
@@ -67,12 +68,46 @@ const RequestDetails = () => {
     }
   };
 
-  const handleApprove = () => {
-    toast.info('Approve functionality coming soon!');
+  const handleApprove = async () => {
+    if (!request) return;
+    
+    try {
+      const success = await approveRequest(request.id);
+      if (success) {
+        toast.success('Request approved successfully');
+        // Refresh the request data
+        const updatedRequest = await getRequestById(request.id);
+        if (updatedRequest) {
+          setRequest(updatedRequest);
+        }
+      } else {
+        toast.error('Failed to approve request');
+      }
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast.error('Failed to approve request');
+    }
   };
 
-  const handleReject = () => {
-    toast.info('Reject functionality coming soon!');
+  const handleReject = async () => {
+    if (!request) return;
+    
+    try {
+      const success = await rejectRequest(request.id);
+      if (success) {
+        toast.success('Request rejected successfully');
+        // Refresh the request data
+        const updatedRequest = await getRequestById(request.id);
+        if (updatedRequest) {
+          setRequest(updatedRequest);
+        }
+      } else {
+        toast.error('Failed to reject request');
+      }
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to reject request');
+    }
   };
 
   const handleEdit = () => {

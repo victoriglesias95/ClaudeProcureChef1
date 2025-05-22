@@ -1,228 +1,236 @@
-ProcureChef - Restaurant Procurement Management System
-ProcureChef is a comprehensive restaurant procurement management system designed to streamline the entire procurement workflow from inventory tracking to order management.
-Project Status (May 2025)
-ProcureChef is in active development with a functioning procurement workflow. The application now features a robust authentication system with role-based access control and race condition protection.
-Completed Features
-Core Functionality
-✅ Secure authentication with role-based access control
-✅ Inventory management with stock counting
-✅ Request creation and approval workflow
-✅ Quote management with supplier selection
-✅ Quote validity tracking and status indicators
-✅ Quote detail views for individual quotes
-✅ Product price comparison across suppliers
-✅ Order generation from selected quotes
-✅ Supplier management and profiles
-Enhanced Functionality
-✅ Race-condition protected authentication with error recovery
-✅ Quote validity system with expiry dates and visual indicators
-✅ Blanket quote support for long-term pricing agreements
-✅ Smart quote reuse to avoid unnecessary requests
-✅ Quote request workflow with status tracking
-✅ Enhanced UI with proper navigation and visual feedback
-Current Workflow
-Authentication & Access Control
+# ProcureChef - Restaurant Procurement Management System
 
-Role-based user authentication (chef, purchasing, admin)
-Protected routes with role enforcement
-Session persistence across page refreshes
-Graceful authentication error handling
+ProcureChef is a React/TypeScript procurement management system designed to streamline restaurant procurement workflows from inventory tracking to order management.
 
-Inventory Management
+## **Current Project Status (May 2025)**
 
-View current stock levels
-Perform inventory counts
-Monitor low stock items
+⚠️ **DEVELOPMENT STATUS: Architecture Refactoring Required**
 
-Request Creation & Approval
+The project has a solid UI foundation but requires significant backend architecture improvements before production deployment.
 
-Create procurement requests from inventory
-Submit requests for approval
-Approve/reject requests
+### **What's Working**
+- ✅ Authentication system with Supabase
+- ✅ UI components and layouts
+- ✅ Basic navigation and routing
+- ✅ Inventory browsing interface
+- ✅ Request creation workflow
+- ✅ Quote comparison interface
+- ✅ Database schema structure
 
-Quote Request Management
+### **Critical Issues Requiring Attention**
 
-Select suppliers for quote requests
-Send quote requests to suppliers
-Track pending quote requests
-View received quotes
+#### **1. Service Layer Architecture Problems**
+- **quotes.ts is overloaded** (600+ lines, multiple responsibilities)
+- **Circular dependencies** between service modules
+- **Inconsistent error handling** patterns across services
+- **Mixed mock/real data** causing integration issues
 
-Quote Comparison & Selection
+#### **2. Database Integration Issues**
+- **Schema mismatches** between services and actual database structure
+- **Incomplete transition** from mock data to real database
+- **Inconsistent query patterns** (some use joins, others separate queries)
 
-Compare pricing across suppliers
-View quote details and validity periods
-Select best quotes for each product
+#### **3. Type System Issues**
+- **Circular type imports** between modules
+- **'any' types used** where proper typing is needed
+- **Type redundancies** (multiple types for same concepts)
 
-Order Generation & Tracking
+#### **4. Component Redundancies**
+- **Multiple quote display patterns** without consistency
+- **Duplicated modal patterns** that could be abstracted
+- **Empty component files** (`ChefRequestForm.tsx`, `ReceiveOrderForm.tsx`)
 
-Generate orders from selected quotes
-Track order status
-View order history
+## **Technical Architecture**
 
-Technical Details
+### **Tech Stack**
+- **Frontend**: React 18 + TypeScript + Tailwind CSS
+- **Database**: Supabase (PostgreSQL)
+- **State Management**: React Context API
+- **Routing**: React Router v6
+- **Build Tool**: Vite
 
-Frontend: React 18 with TypeScript
-Styling: Tailwind CSS
-Routing: React Router v6
-Database: Supabase (PostgreSQL + Authentication)
-State Management: React Context API
-API Handling: Service layer with data access pattern
-Build Tool: Vite with HMR support
+### **Database Schema**
+```
+Core Tables:
+├── users (authentication & roles)
+├── products (product catalog)
+├── inventory (stock levels)
+├── suppliers (supplier information)
+├── supplier_products (pricing & availability)
 
-Next Steps
-Immediate Priorities
+Workflow Tables:
+├── requests → request_items
+├── quote_requests (sent to suppliers)
+├── quotes → quote_items (received from suppliers)
+├── orders → order_items (purchase orders)
+```
 
-Performance optimizations for database operations
-Implement proper error boundaries for component failures
-Refactor authentication context for better HMR support
+### **Current Service Architecture (Needs Refactoring)**
+```
+services/
+├── quotes.ts          # TOO LARGE - handles quotes, suppliers, orders, comparisons
+├── products.ts        # Product & inventory management
+├── requests.ts        # Request management
+├── inventory.ts       # Inventory counting
+└── supabase.ts        # Database connection
+```
 
-Upcoming Features
+### **Recommended Service Architecture**
+```
+services/
+├── auth.ts           # Authentication only
+├── products.ts       # Product catalog
+├── inventory.ts      # Stock management
+├── requests.ts       # Request lifecycle
+├── suppliers.ts      # Supplier management
+├── quotes.ts         # Quote operations only
+├── quote-requests.ts # Quote request workflow
+├── comparisons.ts    # Price comparison logic
+├── orders.ts         # Order management
+└── supabase.ts       # Database connection
+```
 
-Order receiving module
-Advanced reporting and analytics
-Multi-location support
-Mobile optimization
+## **Current Workflow (Partially Functional)**
 
-Future Enhancements
+### **Inventory Management**
+- ✅ View current stock levels
+- ✅ Perform inventory counts
+- ✅ Monitor low stock items
 
-Email notifications for approvals and quotes
-Budget tracking and variance reporting
-Integration with accounting systems
-Barcode scanning for receiving
+### **Request Creation**
+- ✅ Create requests from inventory interface
+- ✅ Add multiple items to cart
+- ✅ Submit requests with metadata
+- ⚠️ Approval workflow (UI only - no backend logic)
 
-Getting Started
-Prerequisites
+### **Quote Management**
+- ⚠️ Send quote requests to suppliers (database integration incomplete)
+- ✅ View quote comparisons interface
+- ✅ Quote validity tracking UI
+- ⚠️ Quote expiration handling (display only)
 
-Node.js 18+
-npm or yarn
-A Supabase account and project
+### **Order Management**
+- ✅ Generate orders from quote selections
+- ✅ View order history interface
+- ❌ Order receiving workflow (empty component)
 
-Installation
-
-Clone the repository
-Install dependencies:
-bashnpm install
-
-Create a .env file with Supabase credentials:
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_key
-
-Start the development server:
-bashnpm run dev
-
-
-Database Setup
-
-Navigate to the Admin page /admin in the application
-Click "Check Connection" to verify Supabase connectivity
-Click "Setup Database" to populate initial data
-Create a test user with the form provided
-
-File Structure
+## **File Structure**
+```
 src/
 ├── components/
-│   ├── layout/
-│   ├── quotes/
-│   ├── requests/
-│   ├── inventory/
-│   └── ui/
-├── contexts/
-│   └── auth/           # Authentication context and provider
-├── pages/
-│   ├── Dashboard.tsx
-│   ├── Inventory.tsx
-│   ├── Requests.tsx
-│   └── ...
-├── services/
-│   ├── quotes.ts
-│   ├── products.ts
-│   └── ...
-├── types/
-│   ├── quote.ts
-│   ├── product.ts
-│   └── ...
-└── utils/
-    ├── quoteUtils.ts
-    └── ...
-Authentication System
-ProcureChef implements a robust authentication system using Supabase Auth with several key features:
+│   ├── layout/           # MainLayout, ProtectedRoute
+│   ├── quotes/           # Quote-related components
+│   ├── requests/         # Request workflow components
+│   ├── inventory/        # Inventory management
+│   └── ui/              # Reusable UI components
+├── pages/               # Route components
+├── services/            # Data access layer (NEEDS REFACTORING)
+├── types/               # TypeScript definitions
+├── mocks/               # Mock data (TO BE REMOVED)
+├── utils/               # Helper functions
+└── contexts/            # React context providers
+```
 
-Role-based Access Control: Different permissions for chefs, purchasing staff, and admins
-Protected Routes: Route guards based on authentication status and user roles
-Session Persistence: Maintains login state across page refreshes
-Race Condition Protection: Prevents state conflicts between initialization and auth events
-Error Recovery: Graceful handling of timeouts and network issues
-Fallback Mechanisms: Ensures a smooth user experience even when authentication faces issues
+## **Known Issues & Technical Debt**
 
-typescript// Example of using authentication in a component
-import { useAuth } from '../contexts/auth';
+### **High Priority Issues**
+1. **Service Architecture**: quotes.ts needs to be split into multiple focused services
+2. **Database Integration**: Complete transition from mock data to Supabase
+3. **Type System**: Fix circular dependencies and remove 'any' types
+4. **Empty Components**: Implement ChefRequestForm and ReceiveOrderForm
 
-function MyComponent() {
-  const { user, isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <p>Please log in</p>;
-  }
-  
-  return (
-    <div>Welcome, {user.email}! Your role: {user.role}</div>
-  );
-}
-Database Schema
-ProcureChef uses a Supabase PostgreSQL database with the following key tables:
+### **Medium Priority Issues**
+1. **Error Handling**: Standardize error patterns across services
+2. **Performance**: Implement caching strategy and optimize queries
+3. **Code Duplication**: Abstract common modal and table patterns
 
-users - Authentication and user profiles
-products - Product catalog management
-inventory - Inventory levels and tracking
-suppliers - Supplier information
-requests - Procurement requests
-request_items - Items within requests
-quote_requests - Quote requests sent to suppliers
-quotes - Quotes received from suppliers
-quote_items - Individual items within quotes
-orders - Purchase orders generated
-order_items - Items within purchase orders
+### **Low Priority Issues**
+1. **Mobile Responsiveness**: Optimize for mobile devices
+2. **Testing**: Add unit and integration tests
+3. **Documentation**: Update inline code documentation
 
-Troubleshooting
-Authentication Issues
-If you experience authentication issues:
+## **Development Roadmap**
 
-Auth Loading Loop: If authentication gets stuck in "Loading...", check:
+### **Phase 1: Architecture Refactoring (1-2 weeks)**
+1. Split monolithic quotes.ts service
+2. Fix circular dependencies
+3. Standardize error handling patterns
+4. Complete database integration
 
-If database connections are timing out (visible in console)
-If race conditions between getSession() and onAuthStateChange are occurring
-Check the browser console for auth state transitions
+### **Phase 2: Component Completion (1 week)**
+1. Implement missing form components
+2. Complete approval workflow backend logic
+3. Implement order receiving functionality
 
+### **Phase 3: Production Preparation (1 week)**
+1. Remove all mock data dependencies
+2. Implement proper error boundaries
+3. Add loading states consistency
+4. Performance optimization
 
-Fast Refresh Issues: If you see "Could not Fast Refresh" errors:
+### **Phase 4: Testing & Polish (1 week)**
+1. Add comprehensive testing
+2. Mobile optimization
+3. Security review
+4. Documentation updates
 
-Ensure all context components use named exports instead of default exports
-Consider splitting large context providers into separate files
-Avoid circular dependencies
+## **Getting Started**
 
+### **Prerequisites**
+- Node.js 18+
+- Supabase account and project
 
-Database Connection Timeouts:
+### **Installation**
+```bash
+# Clone repository
+git clone [repository-url]
+cd procurechef
 
-Check for slow response times in the Network tab
-Consider increasing timeout values in the auth context
-Verify Supabase project is on an appropriate plan for your usage
+# Install dependencies
+npm install
 
+# Environment setup
+cp .env.example .env
+# Edit .env with your Supabase credentials:
+# VITE_SUPABASE_URL=your_supabase_url
+# VITE_SUPABASE_ANON_KEY=your_supabase_key
 
-Authentication Debugging:
+# Start development server
+npm run dev
+```
 
-Use the AuthDebugger component (visible in non-production environments)
-Check localStorage for auth-related items
-Monitor auth state transitions in the console logs
+### **Database Setup**
+1. Navigate to `/admin` in the application
+2. Click "Check Connection" to verify Supabase connectivity
+3. Click "Setup Database" to populate initial data
+4. Create test users as needed
 
+## **Contributing**
 
+### **Before Contributing**
+1. Review the architecture issues listed above
+2. Follow the refactoring roadmap
+3. Ensure all new code follows TypeScript best practices
+4. Test database integration thoroughly
 
-Testing Credentials
-For testing purposes, you can use:
+### **Development Guidelines**
+- **Services**: Keep services focused on single responsibilities
+- **Types**: Use proper TypeScript types, avoid 'any'
+- **Error Handling**: Use consistent error patterns
+- **Testing**: Add tests for new functionality
 
-Email: test@procurechef.com
-Password: testpassword
+## **Current Limitations**
 
-Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
-License
-This project is proprietary software.
+⚠️ **Not Production Ready** - Requires architecture refactoring
+⚠️ **Database Integration Incomplete** - Schema mismatches exist
+⚠️ **Service Layer Coupling** - Circular dependencies need resolution
+⚠️ **Missing Core Features** - Some workflows incomplete
+
+## **Support**
+
+This project is in active development. Please refer to the issues list for known problems and planned improvements.
+
+---
+
+**Last Updated**: May 2025
+**Status**: Development - Architecture Refactoring Phase

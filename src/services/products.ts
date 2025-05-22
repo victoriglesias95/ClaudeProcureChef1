@@ -1,19 +1,11 @@
 import { supabase } from './supabase';
 import { Product, InventoryItem } from '../types/product';
-import { mockProducts, generateMockInventoryItems } from '../mocks/data';
 
-// SET THIS TO FALSE TO USE SUPABASE
-const USE_MOCK_DATA = false; 
-
-// Fetch all products
+/**
+ * Fetch all products from database
+ */
 export async function getProducts(): Promise<Product[]> {
-  // If using mock data, return mocks
-  if (USE_MOCK_DATA) {
-    return mockProducts;
-  }
-  
   try {
-    // Use Supabase
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -31,95 +23,35 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
-// Create a new product
-export async function createProduct(productData: Omit<Product, 'id' | 'created_at'>): Promise<Product> {
-  if (USE_MOCK_DATA) {
-    // For mock mode, simulate product creation
-    const newProduct: Product = {
-      id: `p-${Date.now()}`,
-      ...productData,
-      created_at: new Date().toISOString()
-    };
-    return newProduct;
-  }
-
+/**
+ * Get a single product by ID
+ */
+export async function getProductById(id: string): Promise<Product | null> {
   try {
     const { data, error } = await supabase
       .from('products')
-      .insert({
-        ...productData,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating product:', error);
-    throw error;
-  }
-}
-
-// Update a product
-export async function updateProduct(id: string, productData: Partial<Product>): Promise<Product> {
-  if (USE_MOCK_DATA) {
-    // For mock mode, simulate update
-    const existingProduct = mockProducts.find(p => p.id === id);
-    if (!existingProduct) throw new Error('Product not found');
-    
-    const updatedProduct = {
-      ...existingProduct,
-      ...productData
-    };
-    return updatedProduct;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .update(productData)
+      .select('*')
       .eq('id', id)
-      .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error(`Error fetching product ${id}:`, error);
+      return null;
+    }
+    
     return data;
   } catch (error) {
-    console.error('Error updating product:', error);
-    throw error;
+    console.error(`Error fetching product ${id}:`, error);
+    return null;
   }
 }
 
-// Delete a product
-export async function deleteProduct(id: string): Promise<boolean> {
-  if (USE_MOCK_DATA) {
-    // For mock mode, simulate deletion
-    return true;
-  }
-
-  try {
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    throw error;
-  }
-}
-
-// Fetch products with inventory data
+/**
+ * Fetch products with inventory data using proper join
+ */
 export async function getInventoryItems(): Promise<InventoryItem[]> {
-  if (USE_MOCK_DATA) {
-    return generateMockInventoryItems(mockProducts);
-  }
-  
   try {
-    // Join products with inventory
+    // Use a proper join query to get products with their inventory data
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -129,8 +61,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
         category,
         default_unit,
         created_at,
-        sku,
-        inventory (
+        inventory!inner (
           stock_level,
           current_stock,
           last_updated,
@@ -143,19 +74,23 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       return [];
     }
     
-    // Transform the joined data to match InventoryItem type
-    return data.map(product => ({
+    if (!data || data.length === 0) {
+      console.warn('No inventory data found - ensure products and inventory tables are populated');
+      return [];
+    }
+    
+    // Transform the joined data to match InventoryItem type with explicit typing
+    return data.map((product: any) => ({
       id: product.id,
       name: product.name,
       description: product.description,
       category: product.category,
       default_unit: product.default_unit,
       created_at: product.created_at,
-      sku: product.sku,
-      stock_level: product.inventory?.[0]?.stock_level || 'medium',
-      current_stock: product.inventory?.[0]?.current_stock || 0,
-      last_updated: product.inventory?.[0]?.last_updated || new Date().toISOString(),
-      last_counted_at: product.inventory?.[0]?.last_counted_at
+      stock_level: product.inventory.stock_level || 'medium',
+      current_stock: product.inventory.current_stock || 0,
+      last_updated: product.inventory.last_updated || new Date().toISOString(),
+      last_counted_at: product.inventory.last_counted_at
     }));
   } catch (error) {
     console.error('Error fetching inventory data:', error);
@@ -163,15 +98,122 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
   }
 }
 
-// Get products grouped by category
+/**
+ * Get products grouped by category with inventory data
+ */
 export async function getProductsByCategory(): Promise<Record<string, InventoryItem[]>> {
   const items = await getInventoryItems();
   
+  if (items.length === 0) {
+    console.warn('No inventory items found for categorization');
+    return {};
+  }
+  
   return items.reduce((grouped, item) => {
-    if (!grouped[item.category]) {
-      grouped[item.category] = [];
+    const category = item.category || 'Uncategorized';
+    if (!grouped[category]) {
+      grouped[category] = [];
     }
-    grouped[item.category].push(item);
+    grouped[category].push(item);
     return grouped;
   }, {} as Record<string, InventoryItem[]>);
+}
+
+/**
+ * Create a new product
+ */
+export async function createProduct(product: Omit<Product, 'id' | 'created_at'>): Promise<Product | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .insert({
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        default_unit: product.default_unit
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating product:', error);
+      return null;
+    }
+    
+    // Also create an inventory record for this product
+    const { error: inventoryError } = await supabase
+      .from('inventory')
+      .insert({
+        product_id: data.id,
+        current_stock: 0,
+        stock_level: 'low',
+        last_updated: new Date().toISOString()
+      });
+    
+    if (inventoryError) {
+      console.error('Error creating inventory record:', inventoryError);
+      // Don't fail the whole operation, just log the error
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error creating product:', error);
+    return null;
+  }
+}
+
+/**
+ * Update a product
+ */
+export async function updateProduct(id: string, updates: Partial<Product>): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id);
+    
+    if (error) {
+      console.error(`Error updating product ${id}:`, error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating product ${id}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Delete a product (and its inventory record)
+ */
+export async function deleteProduct(id: string): Promise<boolean> {
+  try {
+    // First delete inventory record
+    const { error: inventoryError } = await supabase
+      .from('inventory')
+      .delete()
+      .eq('product_id', id);
+    
+    if (inventoryError) {
+      console.error(`Error deleting inventory for product ${id}:`, inventoryError);
+      // Continue with product deletion even if inventory deletion fails
+    }
+    
+    // Then delete the product
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error(`Error deleting product ${id}:`, error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error deleting product ${id}:`, error);
+    return false;
+  }
 }

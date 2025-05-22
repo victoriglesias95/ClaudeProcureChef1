@@ -14,7 +14,17 @@ import { getProductsByCategory } from '../services/products';
 import { updateInventoryCount } from '../services/inventory';
 import type { InventoryItem } from '../types/product';
 import { ProductCategory } from '../types/product';
-import { mockCategoryPrices } from '../mocks/data';
+
+// Simple pricing for display (in production, this would come from supplier data)
+const mockCategoryPrices: Record<string, {price: number, originalPrice?: number}> = {
+  'Vegetables': {price: 12.99, originalPrice: 16.50},
+  'Meat': {price: 25.99, originalPrice: 32.99},
+  'Dairy': {price: 8.99},
+  'Seafood': {price: 34.99, originalPrice: 42.50},
+  'Grains': {price: 6.99},
+  'Baking': {price: 9.99, originalPrice: 11.99},
+  'Oils': {price: 15.99},
+};
 
 const Inventory = () => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -34,9 +44,16 @@ const Inventory = () => {
 
   const loadInventoryData = async () => {
     try {
-      console.log("Loading inventory data...");
+      console.log("Loading inventory data from database...");
       const groupedProducts = await getProductsByCategory();
-      console.log("Loaded products:", groupedProducts);
+      console.log("Loaded products from database:", groupedProducts);
+      
+      if (Object.keys(groupedProducts).length === 0) {
+        console.warn('No inventory data found - check database setup');
+        toast.error('No inventory data found. Please check database setup in Admin panel.');
+        setLoading(false);
+        return;
+      }
       
       const categoryList = Object.keys(groupedProducts).map(name => ({
         name,
@@ -51,7 +68,7 @@ const Inventory = () => {
       }
     } catch (error) {
       console.error('Failed to load inventory:', error);
-      toast.error('Failed to load inventory items');
+      toast.error('Failed to load inventory items. Please check your database connection.');
     } finally {
       setLoading(false);
     }
@@ -71,7 +88,7 @@ const Inventory = () => {
 
   // Get the items for the active category
   const activeItems = activeCategory 
-    ? categories.find(c => c.name === activeCategory)?.items || []
+    ? filteredCategories.find(c => c.name === activeCategory)?.items || []
     : [];
     
   const handleAddToRequest = (productId: string, quantity: number) => {
@@ -84,12 +101,15 @@ const Inventory = () => {
       if (product) break;
     }
     
-    if (!product) return;
+    if (!product) {
+      console.error(`Product ${productId} not found in categories`);
+      return;
+    }
     
     if (quantity === 0) {
       newCartItems.delete(productId);
     } else {
-      // Use the category to get the mock price
+      // Use the category to get the display price (this would come from suppliers in production)
       const categoryName = product.category;
       const { price } = mockCategoryPrices[categoryName] || { price: 10.99 };
       
@@ -109,6 +129,10 @@ const Inventory = () => {
   const totalPrice = [...cartItems.values()].reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handleCreateRequest = () => {
+    if (cartItems.size === 0) {
+      toast.error('Please add items to your cart first');
+      return;
+    }
     // Open the request submission modal
     setIsRequestModalOpen(true);
   };
@@ -116,23 +140,62 @@ const Inventory = () => {
   const handleRequestSubmitted = () => {
     // Clear the cart after successful submission
     setCartItems(new Map());
+    // Reload inventory to refresh stock levels
+    loadInventoryData();
   };
 
   const handleStartCount = () => {
+    if (activeItems.length === 0) {
+      toast.error('No items available for counting in the selected category');
+      return;
+    }
     setIsCountModalOpen(true);
   };
   
   const handleSubmitCount = async (counts: Record<string, number>) => {
     try {
-      await updateInventoryCount(counts);
-      // Reload inventory data after count is updated
-      await loadInventoryData();
-      toast.success('Inventory count updated successfully');
+      const success = await updateInventoryCount(counts);
+      if (success) {
+        toast.success('Inventory count updated successfully');
+        // Reload inventory data after count is updated
+        await loadInventoryData();
+      } else {
+        toast.error('Failed to update inventory count');
+      }
     } catch (error) {
       console.error('Error updating inventory count:', error);
       toast.error('Failed to update inventory count');
     }
   };
+
+  // Show database setup message if no data
+  if (!loading && categories.length === 0) {
+    return (
+      <MainLayout>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
+            <p className="text-gray-600">Find and request ingredients</p>
+          </div>
+        </div>
+        
+        <div className="text-center py-12">
+          <div className="max-w-md mx-auto">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">No Inventory Data Found</h2>
+            <p className="text-gray-600 mb-6">
+              It looks like your database hasn't been set up yet. Please use the Admin panel to initialize your inventory data.
+            </p>
+            <Button 
+              variant="primary" 
+              onClick={() => window.location.href = '/admin'}
+            >
+              Go to Admin Panel
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -144,6 +207,7 @@ const Inventory = () => {
         <Button 
           variant="primary"
           onClick={handleStartCount}
+          disabled={loading || categories.length === 0}
         >
           Start Count
         </Button>
@@ -185,33 +249,41 @@ const Inventory = () => {
         <div>
           {/* Section header */}
           <SectionHeader 
-            title={activeCategory || 'All Products'} 
-            onViewMore={() => console.log('View more products')}
+            title={`${activeCategory || 'All Products'}${activeItems.length > 0 ? ` (${activeItems.length})` : ''}`}
           />
           
           {/* Product grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {activeItems.map((item) => {
-              // Get price info based on category
-              const categoryName = item.category;
-              const priceInfo = mockCategoryPrices[categoryName] || { price: 12.99 };
-              
-              return (
-                <ProductCard
-                  key={item.id}
-                  id={item.id}
-                  name={item.name}
-                  price={priceInfo.price}
-                  originalPrice={item.stock_level === 'low' ? priceInfo.originalPrice : undefined}
-                  unit={`${item.default_unit}`}
-                  stockLevel={item.stock_level}
-                  currentStock={item.current_stock}
-                  lastCountedAt={item.last_counted_at}
-                  onAddToRequest={(id, quantity) => handleAddToRequest(id, quantity)}
-                />
-              );
-            })}
-          </div>
+          {activeItems.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No items found in this category.</p>
+              {searchTerm && (
+                <p className="text-gray-400 mt-2">Try adjusting your search term.</p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {activeItems.map((item) => {
+                // Get price info based on category
+                const categoryName = item.category;
+                const priceInfo = mockCategoryPrices[categoryName] || { price: 12.99 };
+                
+                return (
+                  <ProductCard
+                    key={item.id}
+                    id={item.id}
+                    name={item.name}
+                    price={priceInfo.price}
+                    originalPrice={item.stock_level === 'low' ? priceInfo.originalPrice : undefined}
+                    unit={item.default_unit}
+                    stockLevel={item.stock_level}
+                    currentStock={item.current_stock}
+                    lastCountedAt={item.last_counted_at}
+                    onAddToRequest={(id, quantity) => handleAddToRequest(id, quantity)}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
       

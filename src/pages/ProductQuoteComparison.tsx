@@ -6,12 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import Button from '../components/ui/Button';
 import ProductQuoteComparisonTable from '../components/quotes/ProductQuoteComparisonTable';
 import { ProductQuoteComparison, SupplierQuote, QuoteItem } from '../types/quote';
-import { 
-  getProductQuoteComparison, 
-  getRequests, 
-  createOrdersFromProductSelections,
-  getQuoteComparisons 
-} from '../services/quotes';
+import { getProductQuoteComparison, getQuoteComparisons } from '../services/comparisons';
+import { getRequests } from '../services/requests';
+import { createOrdersFromProductSelections } from '../services/orders';
 import { isQuoteValid } from '../utils/quoteUtils';
 
 const ProductQuoteComparisonPage: React.FC = () => {

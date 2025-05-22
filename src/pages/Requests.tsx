@@ -6,7 +6,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import RequestCard from '../components/requests/RequestCard';
 import { getRequests } from '../services/requests';
-import { createQuoteComparisonFromRequest } from '../services/quotes';
+import { createQuoteComparisonFromRequest } from '../services/comparisons';
 import { Request } from '../types/request';
 
 const Requests = () => {

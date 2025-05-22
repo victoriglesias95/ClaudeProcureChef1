@@ -22,16 +22,44 @@ const Admin = () => {
   const handleSetupDatabase = async () => {
     setLoading(true);
     try {
+      console.log('🚀 Starting database setup...');
       const result = await setupDatabase();
+      
       if (result.success) {
         toast.success('Database setup completed successfully');
+        console.log('✅ Setup successful!');
+        console.log('📊 Setup details:', result.details);
+        console.log('📈 Data inserted:', result.dataInserted);
+        
+        // Show success details
+        if (result.details && result.details.length > 0) {
+          const successMessage = result.details.join('\n');
+          alert(`Database Setup Successful! 🎉\n\n${successMessage}`);
+        }
       } else {
-        toast.error('Database setup failed');
-        console.error(result.error);
+        toast.error(`Database setup failed: ${result.error}`);
+        console.error('❌ Setup failed:', result.error);
+        console.error('📋 Setup details:', result.details);
+        
+        // Show detailed error information
+        let errorMessage = `Setup Failed: ${result.error}\n\n`;
+        
+        if (result.details && result.details.length > 0) {
+          errorMessage += 'Details:\n' + result.details.join('\n');
+        }
+        
+        errorMessage += '\n\n💡 Common Solutions:\n';
+        errorMessage += '• Check if database tables exist in Supabase\n';
+        errorMessage += '• Verify your Supabase credentials\n';
+        errorMessage += '• Run the SQL schema in Supabase SQL Editor\n';
+        errorMessage += '• Check Row Level Security policies';
+        
+        alert(errorMessage);
       }
     } catch (error) {
       toast.error('Database setup failed');
-      console.error(error);
+      console.error('💥 Setup exception:', error);
+      alert(`Database Setup Error:\n\n${error}\n\nCheck the console for more details.`);
     } finally {
       setLoading(false);
     }
@@ -44,15 +72,18 @@ const Admin = () => {
       const result = await createTestUser(email, password, role);
       if (result.success) {
         toast.success(`User ${email} created successfully with role: ${role}`);
+        console.log('User creation details:', result.details);
         setEmail('');
         setPassword('');
       } else {
         toast.error('Failed to create user');
-        console.error(result.error);
+        console.error('User creation failed:', result.error);
+        alert(`Failed to create user:\n\n${result.error}`);
       }
     } catch (error) {
       toast.error('Failed to create user');
-      console.error(error);
+      console.error('User creation exception:', error);
+      alert(`User Creation Error:\n\n${error}`);
     } finally {
       setLoading(false);
     }
@@ -68,12 +99,14 @@ const Admin = () => {
           message: 'Connected successfully to Supabase!'
         });
         toast.success('Database connected!');
+        console.log('Connection details:', result);
       } else {
         setConnectionStatus({
           connected: false,
           message: 'Failed to connect to database'
         });
         toast.error('Database connection failed');
+        console.error('Connection failed:', result.error);
       }
     } catch (error) {
       setConnectionStatus({
@@ -81,6 +114,7 @@ const Admin = () => {
         message: 'Error checking connection'
       });
       toast.error('Error checking database connection');
+      console.error('Connection check error:', error);
     } finally {
       setLoading(false);
     }
@@ -289,8 +323,18 @@ const Admin = () => {
             <h3 className="font-medium mb-2">Initialize Database</h3>
             <p className="text-sm text-gray-600 mb-4">
               Populate the database with initial suppliers, products, and inventory.
-              This is useful for getting started.
+              This will create test data for development. <strong>Make sure you have created 
+              the database schema first!</strong>
             </p>
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                <strong>📋 Before running setup:</strong><br/>
+                1. Go to your Supabase dashboard<br/>
+                2. Click SQL Editor<br/>
+                3. Run the database schema creation script<br/>
+                4. Then click "Setup Database" below
+              </p>
+            </div>
             <Button 
               onClick={handleSetupDatabase} 
               isLoading={loading}

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { getOrders } from '../services/quotes';
+import { getOrders, updateOrderStatus } from '../services/orders';
 import { Order } from '../types/quote';
 
 const Orders = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,7 +62,25 @@ const Orders = () => {
   );
 
   const handleViewOrderDetails = (orderId: string) => {
-    toast.info(`Order details view coming soon! Order ID: ${orderId}`);
+    // Navigate to order details page (to be implemented)
+    navigate(`/orders/${orderId}`);
+  };
+
+  const handleSubmitOrder = async (orderId: string) => {
+    try {
+      const success = await updateOrderStatus(orderId, 'submitted');
+      if (success) {
+        toast.success('Order submitted successfully');
+        // Reload orders to show updated status
+        const data = await getOrders();
+        setOrders(data);
+      } else {
+        toast.error('Failed to submit order');
+      }
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      toast.error('Failed to submit order');
+    }
   };
 
   return (
@@ -165,7 +185,7 @@ const Orders = () => {
                       <Button 
                         size="sm" 
                         variant="primary"
-                        onClick={() => toast.info('Submit order functionality coming soon!')}
+                        onClick={() => handleSubmitOrder(order.id)}
                       >
                         Submit Order
                       </Button>

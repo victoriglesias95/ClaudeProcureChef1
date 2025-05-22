@@ -1,4 +1,4 @@
-// src/pages/Quotes.tsx
+// src/pages/Quotes.tsx - UPDATED IMPORTS
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -6,13 +6,13 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import QuoteRequestsTable from '../components/quotes/QuoteRequestsTable';
+import { getQuoteComparisons } from '../services/comparisons';
+import { getSuppliers } from '../services/suppliers';
 import { 
-  getQuoteComparisons, 
-  getSuppliers, 
   getQuoteRequests,
   sendQuoteRequestReminder,
   cancelQuoteRequest
-} from '../services/quotes';
+} from '../services/quote-requests';
 import { Supplier, QuoteComparison, QuoteRequest } from '../types/quote';
 
 const Quotes = () => {

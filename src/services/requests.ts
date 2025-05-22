@@ -127,3 +127,80 @@ export async function updateRequestStatus(id: string, status: RequestStatus): Pr
     return false;
   }
 }
+
+// Approve a request
+export async function approveRequest(id: string): Promise<boolean> {
+  try {
+    const success = await updateRequestStatus(id, 'approved');
+    if (success) {
+      console.log(`Request ${id} approved successfully`);
+    }
+    return success;
+  } catch (error) {
+    console.error(`Error approving request ${id}:`, error);
+    return false;
+  }
+}
+
+// Reject a request
+export async function rejectRequest(id: string): Promise<boolean> {
+  try {
+    const success = await updateRequestStatus(id, 'rejected');
+    if (success) {
+      console.log(`Request ${id} rejected successfully`);
+    }
+    return success;
+  } catch (error) {
+    console.error(`Error rejecting request ${id}:`, error);
+    return false;
+  }
+}
+
+// Update request details
+export async function updateRequest(
+  id: string, 
+  updates: Partial<Omit<Request, 'id' | 'created_at' | 'items'>>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('requests')
+      .update(updates)
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error updating request:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating request:', error);
+    return false;
+  }
+}
+
+// Delete a request (and its items)
+export async function deleteRequest(id: string): Promise<boolean> {
+  try {
+    // First delete request items
+    const { error: itemsError } = await supabase
+      .from('request_items')
+      .delete()
+      .eq('request_id', id);
+    
+    if (itemsError) throw itemsError;
+    
+    // Then delete the request
+    const { error: requestError } = await supabase
+      .from('requests')
+      .delete()
+      .eq('id', id);
+    
+    if (requestError) throw requestError;
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting request:', error);
+    return false;
+  }
+}
