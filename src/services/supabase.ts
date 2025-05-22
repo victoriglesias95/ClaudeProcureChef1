@@ -16,9 +16,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Helper function to check DB connection
 export const checkDatabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from('products').select('count(*)', { count: 'exact' });
+    // Method 1: Just test if we can read from products table
+    const { data, error } = await supabase
+      .from('products')
+      .select('id')
+      .limit(1);
+    
     if (error) throw error;
-    return { connected: true, count: data };
+    return { connected: true, data };
   } catch (error) {
     console.error('Database connection error:', error);
     return { connected: false, error };
