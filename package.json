@@ -10,12 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.1",
+    "@hookform/resolvers": "^5.0.1",
     "@supabase/supabase-js": "^2.38.4",
     "@tanstack/react-query": "^4.32.6",
-    "sonner": "^1.2.4"
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.56.4",
+    "react-router-dom": "^6.8.1",
+    "sonner": "^1.2.4",
+    "tailwind-merge": "^3.3.0",
+    "zod": "^3.25.23",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
