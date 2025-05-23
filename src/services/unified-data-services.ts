@@ -1,12 +1,6 @@
 // src/services/unified-data-service.ts
 import { supabase } from './supabase';
 
-// Define a generic error type
-interface GenericStringError {
-  message: string;
-  code?: string;
-}
-
 // Generic CRUD operations for any table
 class DataService<T extends Record<string, any>> {
   constructor(private tableName: string) {}
@@ -137,6 +131,17 @@ interface Order {
   status: string;
   total: number;
   created_at: string;
+  items: OrderItem[];
+}
+
+interface OrderItem {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  total: number;
 }
 
 interface Request {
@@ -146,6 +151,7 @@ interface Request {
   status: string;
   priority: string;
   created_at: string;
+  total_amount: number;
 }
 
 interface Quote {
@@ -261,7 +267,7 @@ export const procurementService = {
     
     const orders: Order[] = [];
     
-    for (const [supplierId, supplierItems] of Object.entries(supplierGroups)) {
+    for (const [supplierId, supplierSelections] of Object.entries(supplierGroups)) {
       const supplier = await suppliersService.getById(supplierId);
       if (!supplier) continue;
       
@@ -270,7 +276,8 @@ export const procurementService = {
         supplier_id: supplierId,
         supplier_name: supplier.name,
         status: 'draft',
-        total: 0
+        total: 0,
+        items: [] // Add empty items array to satisfy type
       });
       
       if (order) {

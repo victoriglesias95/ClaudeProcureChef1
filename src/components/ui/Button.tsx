@@ -1,7 +1,7 @@
 // src/components/ui/Button.tsx
 import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/utils/cn';
+import { cn } from '@/utils/cn.ts';
 
 const buttonVariants = cva(
   // Base styles

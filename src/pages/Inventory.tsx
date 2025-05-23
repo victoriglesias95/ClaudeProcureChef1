@@ -118,13 +118,19 @@ const Inventory = () => {
         price_per_unit: item.price
       }));
       
+      // Create request with proper type - include total_amount
+      const requestData = {
+        title: data.title,
+        created_by: 'current-user-id', // Get from auth
+        status: 'submitted' as const,
+        priority: data.priority,
+        needed_by: data.neededBy,
+        notes: data.notes,
+        total_amount: totalPrice // Add this field to match Request type
+      };
+      
       await procurementService.createRequestWithItems(
-        {
-          ...data,
-          created_by: 'current-user-id', // Get from auth
-          status: 'submitted',
-          total_amount: totalPrice
-        },
+        requestData,
         requestItems
       );
       

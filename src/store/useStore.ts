@@ -18,19 +18,19 @@ interface AppState {
   setError: (error: string | null) => void;
   
   // Products state
-  products: Product[];
-  setProducts: (products: Product[]) => void;
+  products: StoreProduct[];
+  setProducts: (products: StoreProduct[]) => void;
   
   // Orders state
-  orders: Order[];
-  setOrders: (orders: Order[]) => void;
-  addOrder: (order: Order) => void;
-  updateOrder: (orderId: string, updates: Partial<Order>) => void;
+  orders: StoreOrder[];
+  setOrders: (orders: StoreOrder[]) => void;
+  addOrder: (order: StoreOrder) => void;
+  updateOrder: (orderId: string, updates: Partial<StoreOrder>) => void;
   
   // Requests state
-  requests: Request[];
-  setRequests: (requests: Request[]) => void;
-  updateRequest: (requestId: string, updates: Partial<Request>) => void;
+  requests: StoreRequest[];
+  setRequests: (requests: StoreRequest[]) => void;
+  updateRequest: (requestId: string, updates: Partial<StoreRequest>) => void;
 }
 
 interface CartItem {
@@ -41,7 +41,8 @@ interface CartItem {
   stockLevel?: 'low' | 'medium' | 'high';
 }
 
-interface Product {
+// Store-specific types (to avoid conflicts with service types)
+interface StoreProduct {
   id: string;
   name: string;
   category: string;
@@ -49,7 +50,7 @@ interface Product {
   stock: number;
 }
 
-interface Order {
+interface StoreOrder {
   id: string;
   number: string;
   status: string;
@@ -57,7 +58,7 @@ interface Order {
   items: any[];
 }
 
-interface Request {
+interface StoreRequest {
   id: string;
   title: string;
   status: string;
@@ -114,7 +115,7 @@ export const useStore = create<AppState>()(
           }),
         updateOrder: (orderId, updates) =>
           set((state) => {
-            const index = state.orders.findIndex((o: Order) => o.id === orderId);
+            const index = state.orders.findIndex((o: StoreOrder) => o.id === orderId);
             if (index !== -1) {
               Object.assign(state.orders[index], updates);
             }
@@ -128,7 +129,7 @@ export const useStore = create<AppState>()(
           }),
         updateRequest: (requestId, updates) =>
           set((state) => {
-            const index = state.requests.findIndex((r: Request) => r.id === requestId);
+            const index = state.requests.findIndex((r: StoreRequest) => r.id === requestId);
             if (index !== -1) {
               Object.assign(state.requests[index], updates);
             }
@@ -168,8 +169,16 @@ export const actions = {
       setLoading(true);
       setError(null);
       
-      const products = await productsService.getAll();
-      setProducts(products);
+      const serviceProducts = await productsService.getAll();
+      // Convert service products to store products
+      const storeProducts: StoreProduct[] = serviceProducts.map(p => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: 10, // Default price since service Product doesn't have price
+        stock: 0   // Default stock since service Product doesn't have stock
+      }));
+      setProducts(storeProducts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load products');
     } finally {
@@ -184,11 +193,23 @@ export const actions = {
       setLoading(true);
       setError(null);
       
-      const order = await ordersService.create(orderData);
-      if (order) {
-        addOrder(order);
+      const serviceOrder = await ordersService.create({
+        ...orderData,
+        items: [] // Ensure items array exists
+      });
+      
+      if (serviceOrder) {
+        // Convert service order to store order
+        const storeOrder: StoreOrder = {
+          id: serviceOrder.id,
+          number: serviceOrder.number,
+          status: serviceOrder.status,
+          total: serviceOrder.total,
+          items: serviceOrder.items || []
+        };
+        addOrder(storeOrder);
         clearCart();
-        return order;
+        return storeOrder;
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to create order');
