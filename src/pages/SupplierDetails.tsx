@@ -1,4 +1,4 @@
-// src/pages/SupplierDetails.tsx
+// src/pages/SupplierDetails.tsx - Fixed version
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -82,12 +82,12 @@ const SupplierDetails: React.FC = () => {
       if (supplierError) throw supplierError;
       setSupplier(supplierData);
       
-      // Load supplier products with product details
+      // Load supplier products with product details - FIXED JOIN
       const { data: supplierProductsData, error: spError } = await supabase
         .from('supplier_products')
         .select(`
           *,
-          product:products!inner(
+          products (
             id,
             name,
             category,
@@ -97,21 +97,27 @@ const SupplierDetails: React.FC = () => {
         .eq('supplier_id', id)
         .eq('available', true);
       
-      if (spError) throw spError;
+      if (spError) {
+        console.error('Error loading supplier products:', spError);
+        throw spError;
+      }
       
-      // Transform data
-      const transformedProducts = supplierProductsData?.map(sp => ({
-        supplier_id: sp.supplier_id,
-        product_id: sp.product_id,
-        product_name: sp.product.name,
-        category: sp.product.category,
-        price: sp.price,
-        supplier_product_code: sp.supplier_product_code,
-        available: sp.available,
-        minimum_order_quantity: sp.minimum_order_quantity,
-        last_price_update: sp.last_price_update,
-        lead_time_days: sp.lead_time_days
-      })) || [];
+      // Transform data - FIXED MAPPING
+      const transformedProducts = supplierProductsData?.map(sp => {
+        const product = sp.products as unknown as Product;
+        return {
+          supplier_id: sp.supplier_id,
+          product_id: sp.product_id,
+          product_name: product?.name || 'Unknown Product',
+          category: product?.category || 'Uncategorized',
+          price: sp.price || 0,
+          supplier_product_code: sp.supplier_product_code,
+          available: sp.available,
+          minimum_order_quantity: sp.minimum_order_quantity,
+          last_price_update: sp.last_price_update,
+          lead_time_days: sp.lead_time_days
+        };
+      }) || [];
       
       setSupplierProducts(transformedProducts);
       
@@ -139,7 +145,21 @@ const SupplierDetails: React.FC = () => {
     }
     
     try {
-      const { error } = await supabase
+      // First check if this product is already in the catalog
+      const { data: existing, error: checkError } = await supabase
+        .from('supplier_products')
+        .select('id')
+        .eq('supplier_id', id)
+        .eq('product_id', selectedProductId)
+        .single();
+      
+      if (existing) {
+        toast.error('This product is already in the supplier catalog');
+        return;
+      }
+      
+      // Insert new supplier product
+      const { data, error } = await supabase
         .from('supplier_products')
         .insert({
           supplier_id: id,
@@ -150,17 +170,21 @@ const SupplierDetails: React.FC = () => {
           minimum_order_quantity: minOrderQty ? parseInt(minOrderQty) : null,
           lead_time_days: leadTime ? parseInt(leadTime) : null,
           last_price_update: new Date().toISOString()
-        });
+        })
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding product:', error);
+        throw error;
+      }
       
       toast.success('Product added to supplier catalog');
       setIsAddProductModalOpen(false);
       resetForm();
       loadSupplierData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error(`Failed to add product: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -510,13 +534,19 @@ const SupplierDetails: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {availableProductsToAdd.length === 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  All products are already in this supplier's catalog.
+                </p>
+              )}
             </FormField>
 
-            <FormField id="price" label="Price per Unit">
+            <FormField id="price" label="Price per Unit (R$)">
               <input
                 id="price"
                 type="number"
                 step="0.01"
+                min="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
@@ -540,6 +570,7 @@ const SupplierDetails: React.FC = () => {
               <input
                 id="minOrderQty"
                 type="number"
+                min="1"
                 value={minOrderQty}
                 onChange={(e) => setMinOrderQty(e.target.value)}
                 placeholder="1"
@@ -551,6 +582,7 @@ const SupplierDetails: React.FC = () => {
               <input
                 id="leadTime"
                 type="number"
+                min="0"
                 value={leadTime}
                 onChange={(e) => setLeadTime(e.target.value)}
                 placeholder="1"
@@ -586,11 +618,12 @@ const SupplierDetails: React.FC = () => {
           }
         >
           <div className="space-y-4">
-            <FormField id="editPrice" label="Price per Unit">
+            <FormField id="editPrice" label="Price per Unit (R$)">
               <input
                 id="editPrice"
                 type="number"
                 step="0.01"
+                min="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
@@ -614,9 +647,10 @@ const SupplierDetails: React.FC = () => {
               <input
                 id="editMinOrderQty"
                 type="number"
+                min="0"
                 value={minOrderQty}
                 onChange={(e) => setMinOrderQty(e.target.value)}
-                placeholder="1"
+                placeholder="0"
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </FormField>
@@ -625,9 +659,10 @@ const SupplierDetails: React.FC = () => {
               <input
                 id="editLeadTime"
                 type="number"
+                min="0"
                 value={leadTime}
                 onChange={(e) => setLeadTime(e.target.value)}
-                placeholder="1"
+                placeholder="0"
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </FormField>
