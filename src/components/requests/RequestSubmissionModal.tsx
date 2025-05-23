@@ -5,7 +5,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import FormField from '../ui/FormField';
 import RequestItemsList from './RequestItemsList';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { RequestItem, RequestPriority } from '../../types/request';
 import { createRequest } from '../../services/requests';
 

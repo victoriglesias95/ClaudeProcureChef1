@@ -5,7 +5,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import FormField from '../ui/FormField';
 import SearchBar from '../ui/SearchBar';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { getProductsByCategory, searchProducts } from '../../services/products';
 import { createRequest } from '../../services/requests';
 import { RequestPriority, RequestItem } from '../../types/request';

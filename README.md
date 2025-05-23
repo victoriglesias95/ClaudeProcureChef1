@@ -2,10 +2,10 @@
 
 ProcureChef is a React TypeScript restaurant procurement management system that streamlines the entire procurement workflow from inventory tracking to order management, using Supabase as the backend.
 
-## 🚀 Current Project Status (Updated December 2024)
+## 🚀 Current Project Status (Updated January 2025)
 
 ### ✅ **Fully Functional Features**
-- **User Authentication** - Login/logout with role-based access (chef, purchasing, admin)
+- **User Authentication** - Robust login/logout with role-based access (chef, purchasing, admin)
 - **Inventory Management** - Product browsing, stock tracking, physical counting with cart system
 - **Request Creation** - Cart-based ingredient requests + Advanced chef request form
 - **Quote Management** - Quote comparison, supplier selection, and quote lifecycle
@@ -14,15 +14,26 @@ ProcureChef is a React TypeScript restaurant procurement management system that 
 - **Supplier Management** - Full CRUD operations for suppliers and supplier products
 - **Admin Tools** - Database setup, user management, connection testing, and verification tools
 
-### 🔒 **Security Status**
+### 🔒 **Security & Performance Status**
 - **✅ FIXED**: Authentication security vulnerability (no longer defaults to admin role)
 - **✅ SECURE**: Role-based access control working properly
-- **✅ VERIFIED**: New users default to 'chef' role (least privilege)
-
-### ⚡ **Performance Improvements**
+- **✅ VERIFIED**: New users default to 'chef' role (least privilege principle)
 - **✅ OPTIMIZED**: Reduced quotes page polling from 5 seconds to 30 seconds
 - **✅ IMPROVED**: Hot module replacement errors resolved
-- **✅ CLEANED**: Removed 6 empty/unused files reducing build size
+- **✅ ENHANCED**: Authentication system with proper error handling and timeouts
+- **✅ FIXED**: Infinite loop issues in auth state management
+
+### ⚡ **Recent Technical Improvements**
+- **Authentication System Overhaul**: 
+  - Fixed infinite loop issues during sign-in
+  - Added proper error handling with specific error codes
+  - Implemented 8-second timeout protection
+  - Separated concerns for better HMR compatibility
+  - Added development fallbacks to prevent complete blocking
+- **Hot Module Replacement**: Resolved Fast Refresh incompatibility issues
+- **File Structure**: Clean separation of auth types, hooks, and components
+- **Error Handling**: Enhanced error messages and debugging capabilities
+- **Performance**: Optimized polling intervals and reduced server load
 
 ### 🆕 **New Features Added**
 - **Order Receiving System**: Complete modal-based receiving with discrepancy tracking
@@ -30,6 +41,7 @@ ProcureChef is a React TypeScript restaurant procurement management system that 
 - **Enhanced Orders Management**: Status-based actions and receiving workflow
 - **Product Search**: Search functionality for chef request form
 - **Smart Inventory Integration**: Stock level awareness in request creation
+- **Auth Debug Tools**: Development debugging tools for authentication issues
 
 ### ⚠️ **Known Limitations**
 - **Architecture**: Some service redundancies remain (planned for future optimization)
@@ -44,6 +56,7 @@ ProcureChef is a React TypeScript restaurant procurement management system that 
 - **State Management**: React Context API + React Query
 - **UI Components**: Custom component library with Tailwind
 - **Notifications**: Sonner for toast messages
+- **Development**: Vite with Hot Module Replacement
 
 ## 🛠️ **Setup Instructions**
 
@@ -106,23 +119,26 @@ order_items (id, order_id, product_id, quantity, price, total, sku, supplier_pro
 supplier_products (supplier_id, product_id, price, supplier_product_code, available, minimum_order_quantity)
 ```
 
-## 🎯 **Current Development Priorities**
+## 🎯 **Development Phases**
 
-### **Phase 1: ✅ COMPLETED**
+### **Phase 1: ✅ COMPLETED (Security & Performance)**
 - [x] **Fix authentication security vulnerability**
+- [x] **Resolve infinite loop issues in auth system**
 - [x] **Improve performance (polling optimization)**
+- [x] **Fix Hot Module Replacement issues**
 - [x] **Clean up unused code and files**
+- [x] **Enhance error handling and debugging**
 
-### **Phase 2: ⏳ FUTURE (Optional Architecture Improvements)**
-- [ ] **Consolidate service layer redundancies**
-- [ ] **Optimize N+1 queries in order creation**
-- [ ] **Refactor quote services architecture**
-
-### **Phase 3: ✅ MOSTLY COMPLETED**
+### **Phase 2: ✅ MOSTLY COMPLETED (Core Features)**
 - [x] **Implement order receiving workflow**
 - [x] **Create advanced chef request form**
 - [x] **Integrate receiving into orders page**
 - [ ] **Complete request approval backend integration**
+
+### **Phase 3: ⏳ FUTURE (Architecture Improvements)**
+- [ ] **Consolidate service layer redundancies**
+- [ ] **Optimize N+1 queries in order creation**
+- [ ] **Refactor quote services architecture**
 
 ### **Phase 4: 🔮 FUTURE ENHANCEMENTS**
 - [ ] **Email notifications for quotes and orders**
@@ -135,13 +151,22 @@ supplier_products (supplier_id, product_id, price, supplier_product_code, availa
 
 ```
 src/
-├── components/           # Reusable UI components
+├── types/               # TypeScript type definitions
+│   ├── auth.ts          # Authentication types
+│   ├── product.ts       # Product & inventory types
+│   ├── request.ts       # Request management types
+│   └── quote.ts         # Quote & order types
+├── hooks/               # Custom React hooks
+│   └── useAuth.ts       # Authentication hook
+├── contexts/            # React Context providers
+│   └── AuthContext.tsx  # Authentication context (SECURITY FIXED)
+├── components/          # Reusable UI components
 │   ├── layout/          # MainLayout, ProtectedRoute
 │   ├── quotes/          # Quote-related components
 │   ├── requests/        # Request management
 │   ├── inventory/       # Inventory components
-│   ├── receiver/        # NEW: Order receiving components
-│   ├── chef/            # NEW: Advanced chef components
+│   ├── receiver/        # Order receiving components
+│   ├── chef/            # Advanced chef components
 │   └── ui/              # Basic UI components
 ├── pages/               # Main application pages
 ├── services/            # API/Database layer
@@ -152,15 +177,15 @@ src/
 │   ├── inventory.ts     # Inventory management
 │   ├── suppliers.ts     # Supplier management
 │   └── supabase.ts      # Database connection
-├── contexts/            # React Context providers (SECURITY FIXED)
-├── types/               # TypeScript type definitions
 └── utils/               # Utility functions
+    ├── databaseSetup.ts # Database initialization
+    └── quoteUtils.ts    # Quote validation utilities
 ```
 
 ## 🧪 **Testing Current Functionality**
 
 ### **Complete Workflow Test:**
-1. **Login** as any user (secure role assignment)
+1. **Login** - Use test@procurechef.com with secure authentication
 2. **Inventory** → Browse products → Add to cart → Create request
 3. **Chef Request** → Use advanced form for menu-based requests
 4. **Requests** → View requests → Approve if needed
@@ -169,14 +194,14 @@ src/
 7. **Orders** → Submit orders → Receive deliveries → Update inventory
 
 ### **New Features to Test:**
+- ✅ **Robust Authentication**: Login/logout with proper error handling
 - ✅ **Order Receiving**: Go to Orders → Click "Receive Order" on submitted orders
 - ✅ **Chef Requests**: Advanced request form with menu planning and stock awareness
 - ✅ **Product Search**: Search functionality in chef request form
-- ✅ **Security**: Try creating new users - they get 'chef' role by default
-- ✅ **Performance**: Quotes page updates every 30 seconds instead of 5
+- ✅ **Admin Tools**: Database setup and user management in /admin
 
 ### **Known Working Paths:**
-- ✅ User registration/login (secure)
+- ✅ User registration/login (secure and robust)
 - ✅ Inventory browsing and counting
 - ✅ Request creation (basic + advanced chef form)
 - ✅ Quote comparison and selection
@@ -204,17 +229,30 @@ npm run dev              # Start development server (localhost:5173)
 # - Component lifecycle events
 ```
 
-## ⚠️ **Known Quirks & Workarounds**
+## ⚠️ **Troubleshooting Guide**
 
-1. **Hot Module Replacement**: Occasionally shows errors but resolves with server restart
-2. **Role Assignment**: Users now correctly default to 'chef' role (security fixed)
-3. **Database Setup**: Requires manual schema creation in Supabase before running setup
-4. **Order Status Flow**: Draft → Submitted → Confirmed → Shipped → Delivered (via receiving)
+### **Authentication Issues**
+- **Stuck at "Loading Authentication"**: Run database setup via /admin page
+- **"Users table not found"**: Click "Setup Database" in admin panel
+- **Permission errors**: Check Supabase Row Level Security policies
+- **HMR errors**: Auth system now properly separated for HMR compatibility
+
+### **Common Solutions**
+- **Import Errors**: Restart dev server (`npm run dev`)
+- **Database Connection**: Use `/admin` page tools for debugging  
+- **Authentication Issues**: Check browser console for specific error codes
+- **Missing Features**: Verify components are properly imported and integrated
+
+### **Error Codes**
+- **SETUP_REQUIRED**: Database tables missing - run setup
+- **PERMISSION_DENIED**: Check RLS policies in Supabase
+- **TIMEOUT**: Database operation timed out - check connection
+- **USER_CREATION_FAILED**: Error creating user record - check permissions
 
 ## 🤝 **Contributing**
 
 **Current Focus Areas:**
-1. **Testing**: Help test the new receiving and chef request workflows
+1. **Testing**: Help test the receiving and chef request workflows
 2. **Mobile UX**: Improve mobile responsiveness
 3. **Performance**: Further optimize database queries
 4. **Features**: Email notifications and reporting
@@ -224,15 +262,17 @@ npm run dev              # Start development server (localhost:5173)
 - Use proper TypeScript typing
 - Test complete workflows, not just individual features
 - Maintain security best practices
+- Ensure HMR compatibility when modifying auth system
 
 ## 📋 **Deployment Checklist**
 
 **Production Ready:**
 - [x] Security vulnerabilities fixed
+- [x] Authentication system robust and secure
 - [x] Performance optimized
 - [x] Core workflows complete
-- [x] Authentication working
 - [x] Database schema stable
+- [x] HMR issues resolved
 
 **Before Production:**
 - [ ] Set up proper environment variables
@@ -240,34 +280,31 @@ npm run dev              # Start development server (localhost:5173)
 - [ ] Set up error monitoring
 - [ ] Configure backup procedures
 - [ ] Test with real data volumes
+- [ ] Set up email notification service
 
 ## 🆘 **Need Help?**
 
-**Common Issues:**
-- **Import Errors**: Restart dev server (`npm run dev`)
-- **Database Connection**: Use `/admin` page tools for debugging  
-- **Authentication Issues**: Verify Supabase credentials and user table setup
-- **Missing Features**: Check if components are properly imported and integrated
+**Authentication Issues:**
+If you encounter authentication problems:
+1. Check browser console for specific error codes
+2. Use the /admin page for database diagnostics
+3. Verify Supabase credentials in .env file
+4. Run "Setup Database" if tables are missing
 
-**Recent Updates:**
-- **Security**: Fixed admin role vulnerability
-- **Performance**: Optimized polling intervals
-- **Features**: Added order receiving and advanced chef requests
-- **Cleanup**: Removed unused files and code
-
-**Architecture Status:**
-- **Phase 1**: ✅ Security & Performance (Complete)
-- **Phase 2**: ⏳ Architecture Optimization (Future)
-- **Phase 3**: ✅ Feature Completion (Mostly Complete)
-
----
+**Development Environment:**
+- Restart dev server for import errors: `npm run dev`
+- Use `/admin` page tools for database debugging  
+- Check network tab for API call failures
+- Browser console shows detailed auth state changes
 
 ## 🎉 **Recent Achievements**
 
-- ✅ **Zero Security Vulnerabilities**: Fixed authentication bypass
-- ✅ **Improved Performance**: 6x reduction in server polling
-- ✅ **New Workflows**: Complete order receiving system
-- ✅ **Enhanced UX**: Advanced chef request capabilities
-- ✅ **Cleaner Codebase**: Removed dead code and unused files
+- ✅ **Zero Security Vulnerabilities**: Fixed authentication bypass and infinite loops
+- ✅ **Improved Performance**: 6x reduction in server polling + optimized auth flow
+- ✅ **Enhanced Developer Experience**: Fixed HMR issues and improved error handling
+- ✅ **New Workflows**: Complete order receiving system with inventory integration
+- ✅ **Enhanced UX**: Advanced chef request capabilities with real-time stock awareness
+- ✅ **Cleaner Architecture**: Proper separation of concerns for maintainability
+- ✅ **Robust Error Handling**: Clear error messages and development fallbacks
 
-**Last Updated**: December 2024 - After Phase 1-3 Implementation
+**Last Updated**: January 2025 - After Authentication System Overhaul and HMR Fixes

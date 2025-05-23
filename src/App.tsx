@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthProvider from './contexts/AuthContext'; // Default import - no curly braces
+import { useAuth } from './hooks/useAuth';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Requests from './pages/Requests';
@@ -17,28 +18,78 @@ import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Admin from './pages/Admin';
 import { useEffect } from 'react';
 
-// Loading screen component
-const LoadingScreen = () => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-100">
-    <div className="text-center">
-      <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-      <p className="mt-2 text-gray-700">Loading authentication...</p>
+// Enhanced loading screen component
+const LoadingScreen = () => {
+  const { error, authState } = useAuth();
+  
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="text-center max-w-md p-6">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+        <p className="text-gray-700 mb-2">Loading authentication...</p>
+        <p className="text-sm text-gray-500">Auth State: {authState}</p>
+        
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-800 font-medium">Authentication Error:</p>
+            <p className="text-sm text-red-700 mt-1">{error.message}</p>
+            
+            {error.message.includes('Users table not found') && (
+              <div className="mt-3 text-xs text-red-600">
+                <p>Database setup required:</p>
+                <ol className="list-decimal list-inside mt-1 space-y-1">
+                  <li>Go to /admin page</li>
+                  <li>Run "Setup Database"</li>
+                  <li>Try logging in again</li>
+                </ol>
+              </div>
+            )}
+            
+            {(error.message.includes('timeout') || error.message.includes('network')) && (
+              <div className="mt-3 text-xs text-red-600">
+                <p>Connection issue detected. Please check:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Internet connection</li>
+                  <li>Supabase URL and API key</li>
+                  <li>Try refreshing the page</li>
+                </ul>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-3 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        
+        {!error && (
+          <div className="mt-4 text-xs text-gray-500">
+            <p>If this takes more than 10 seconds, try refreshing the page.</p>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-// App content with loading state handled
+// App content with enhanced error handling
 const AppContent = () => {
   const auth = useAuth();
   
-  // Log auth state for debugging
+  // Enhanced logging with error information
   useEffect(() => {
     console.log('AppContent rendering with auth state:', { 
+      authState: auth.authState,
       isAuthenticated: auth.isAuthenticated, 
       isLoading: auth.isLoading,
       hasUser: auth.user ? true : false,
       userEmail: auth.user?.email,
-      userRole: auth.user?.role
+      userRole: auth.user?.role,
+      hasError: auth.error ? true : false,
+      errorMessage: auth.error?.message
     });
   });
 
