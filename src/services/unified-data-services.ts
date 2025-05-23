@@ -1,8 +1,14 @@
 // src/services/unified-data-service.ts
 import { supabase } from './supabase';
 
+// Define a generic error type
+interface GenericStringError {
+  message: string;
+  code?: string;
+}
+
 // Generic CRUD operations for any table
-class DataService<T> {
+class DataService<T extends Record<string, any>> {
   constructor(private tableName: string) {}
 
   async getAll(options?: {
@@ -27,7 +33,7 @@ class DataService<T> {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data as T[]) || [];
     } catch (error) {
       console.error(`Error fetching ${this.tableName}:`, error);
       return [];
@@ -43,7 +49,7 @@ class DataService<T> {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as T;
     } catch (error) {
       console.error(`Error fetching ${this.tableName} by id:`, error);
       return null;
@@ -59,7 +65,7 @@ class DataService<T> {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as T;
     } catch (error) {
       console.error(`Error creating ${this.tableName}:`, error);
       return null;
@@ -97,46 +103,120 @@ class DataService<T> {
   }
 }
 
+// Define proper types for the services
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  default_unit: string;
+  created_at: string;
+}
+
+interface InventoryItem extends Product {
+  current_stock: number;
+  stock_level: 'low' | 'medium' | 'high';
+  last_updated: string;
+  last_counted_at?: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  email: string;
+  contact?: string;
+  phone?: string;
+  address?: string;
+  created_at: string;
+}
+
+interface Order {
+  id: string;
+  number: string;
+  supplier_id: string;
+  supplier_name: string;
+  status: string;
+  total: number;
+  created_at: string;
+}
+
+interface Request {
+  id: string;
+  title: string;
+  created_by: string;
+  status: string;
+  priority: string;
+  created_at: string;
+}
+
+interface Quote {
+  id: string;
+  supplier_id: string;
+  supplier_name: string;
+  request_id: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+}
+
 // Specialized services using the generic base
-export const productsService = new DataService<any>('products');
-export const inventoryService = new DataService<any>('inventory');
-export const suppliersService = new DataService<any>('suppliers');
-export const ordersService = new DataService<any>('orders');
-export const requestsService = new DataService<any>('requests');
-export const quotesService = new DataService<any>('quotes');
+export const productsService = new DataService<Product>('products');
+export const inventoryService = new DataService<InventoryItem>('inventory');
+export const suppliersService = new DataService<Supplier>('suppliers');
+export const ordersService = new DataService<Order>('orders');
+export const requestsService = new DataService<Request>('requests');
+export const quotesService = new DataService<Quote>('quotes');
 
 // Complex operations that need custom logic
 export const procurementService = {
   // Get products with inventory data
-  async getProductsWithInventory() {
-    return productsService.getAll({
-      select: `
-        *,
-        inventory!inner (
-          current_stock,
-          stock_level,
-          last_updated,
-          last_counted_at
-        )
-      `,
-      order: { column: 'name', ascending: true }
-    });
+  async getProductsWithInventory(): Promise<InventoryItem[]> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          inventory!inner (
+            current_stock,
+            stock_level,
+            last_updated,
+            last_counted_at
+          )
+        `)
+        .order('name');
+      
+      if (error) throw error;
+      
+      return data?.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        default_unit: product.default_unit,
+        created_at: product.created_at,
+        current_stock: product.inventory.current_stock || 0,
+        stock_level: product.inventory.stock_level || 'low',
+        last_updated: product.inventory.last_updated || new Date().toISOString(),
+        last_counted_at: product.inventory.last_counted_at
+      })) || [];
+    } catch (error) {
+      console.error('Error getting products with inventory:', error);
+      return [];
+    }
   },
 
   // Create request with items
-  async createRequestWithItems(request: any, items: any[]) {
+  async createRequestWithItems(request: Partial<Request>, requestItems: any[]): Promise<Request | null> {
     try {
       const createdRequest = await requestsService.create(request);
       if (!createdRequest) throw new Error('Failed to create request');
       
-      const requestItems = items.map(item => ({
+      const itemsWithRequestId = requestItems.map(item => ({
         ...item,
         request_id: createdRequest.id
       }));
       
       const { error } = await supabase
         .from('request_items')
-        .insert(requestItems);
+        .insert(itemsWithRequestId);
       
       if (error) throw error;
       
@@ -167,17 +247,21 @@ export const procurementService = {
   },
 
   // Create orders from selections
-  async createOrdersFromSelections(selections: any[]) {
+  async createOrdersFromSelections(selections: Array<{
+    productId: string;
+    supplierId: string;
+    quantity: number;
+  }>): Promise<Order[]> {
     // Group by supplier
     const supplierGroups = selections.reduce((acc, sel) => {
       if (!acc[sel.supplierId]) acc[sel.supplierId] = [];
       acc[sel.supplierId].push(sel);
       return acc;
-    }, {});
+    }, {} as Record<string, typeof selections>);
     
-    const orders = [];
+    const orders: Order[] = [];
     
-    for (const [supplierId, items] of Object.entries(supplierGroups)) {
+    for (const [supplierId, supplierItems] of Object.entries(supplierGroups)) {
       const supplier = await suppliersService.getById(supplierId);
       if (!supplier) continue;
       
@@ -191,7 +275,7 @@ export const procurementService = {
       
       if (order) {
         orders.push(order);
-        // Add order items logic here
+        // Add order items logic here if needed
       }
     }
     

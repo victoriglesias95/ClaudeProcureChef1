@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { productsService, ordersService } from '../services/unified-data-services';
 
 interface AppState {
   // Cart state
@@ -113,7 +114,7 @@ export const useStore = create<AppState>()(
           }),
         updateOrder: (orderId, updates) =>
           set((state) => {
-            const index = state.orders.findIndex(o => o.id === orderId);
+            const index = state.orders.findIndex((o: Order) => o.id === orderId);
             if (index !== -1) {
               Object.assign(state.orders[index], updates);
             }
@@ -127,7 +128,7 @@ export const useStore = create<AppState>()(
           }),
         updateRequest: (requestId, updates) =>
           set((state) => {
-            const index = state.requests.findIndex(r => r.id === requestId);
+            const index = state.requests.findIndex((r: Request) => r.id === requestId);
             if (index !== -1) {
               Object.assign(state.requests[index], updates);
             }
@@ -167,7 +168,6 @@ export const actions = {
       setLoading(true);
       setError(null);
       
-      // Replace with your actual API call
       const products = await productsService.getAll();
       setProducts(products);
     } catch (error) {
@@ -184,7 +184,6 @@ export const actions = {
       setLoading(true);
       setError(null);
       
-      // Replace with your actual API call
       const order = await ordersService.create(orderData);
       if (order) {
         addOrder(order);

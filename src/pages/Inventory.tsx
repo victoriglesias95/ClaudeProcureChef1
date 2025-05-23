@@ -5,8 +5,8 @@ import { z } from 'zod';
 import MainLayout from '@/components/layout/MainLayout';
 import Button from '@/components/ui/Button';
 import { FormModal, FormInput } from '@/components/ui/FormModal';
-import { useStore, useCartTotal, actions } from '@/store/useStore';
-import { procurementService } from '@/services/unified-data-service';
+import { useStore, useCartTotal } from '@/store/useStore';
+import { procurementService } from '@/services/unified-data-services';
 
 // Simple product grid component
 const ProductGrid: React.FC<{
@@ -110,7 +110,7 @@ const Inventory = () => {
   // Handle request submission
   const handleSubmitRequest = async (data: z.infer<typeof requestSchema>) => {
     try {
-      const items = Array.from(cart.entries()).map(([productId, item]) => ({
+      const requestItems = Array.from(cart.entries()).map(([productId, item]) => ({
         product_id: productId,
         product_name: item.name,
         quantity: item.quantity,
@@ -125,7 +125,7 @@ const Inventory = () => {
           status: 'submitted',
           total_amount: totalPrice
         },
-        items
+        requestItems
       );
       
       toast.success('Request submitted successfully');
