@@ -1,242 +1,135 @@
-// src/store/useStore.ts
+// src/store/useStore.ts - Clean architecture: Cart + UI state only
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { productsService, ordersService } from '../services/unified-data-services';
+
+interface CartItem {
+  quantity: number;
+  price: number;
+  name: string;
+  unit: string;
+  currentStock?: number;
+  stockLevel?: 'low' | 'medium' | 'high';
+}
 
 interface AppState {
   // Cart state
   cart: Map<string, CartItem>;
   addToCart: (productId: string, item: CartItem) => void;
+  updateCartItem: (productId: string, updates: Partial<CartItem>) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
   
   // UI state
   isLoading: boolean;
   error: string | null;
+  activeModal: string | null;
+  
+  // UI actions
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  
-  // Products state
-  products: StoreProduct[];
-  setProducts: (products: StoreProduct[]) => void;
-  
-  // Orders state
-  orders: StoreOrder[];
-  setOrders: (orders: StoreOrder[]) => void;
-  addOrder: (order: StoreOrder) => void;
-  updateOrder: (orderId: string, updates: Partial<StoreOrder>) => void;
-  
-  // Requests state
-  requests: StoreRequest[];
-  setRequests: (requests: StoreRequest[]) => void;
-  updateRequest: (requestId: string, updates: Partial<StoreRequest>) => void;
-}
-
-interface CartItem {
-  quantity: number;
-  price: number;
-  name: string;
-  currentStock?: number;
-  stockLevel?: 'low' | 'medium' | 'high';
-}
-
-// Store-specific types (to avoid conflicts with service types)
-interface StoreProduct {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-}
-
-interface StoreOrder {
-  id: string;
-  number: string;
-  status: string;
-  total: number;
-  items: any[];
-}
-
-interface StoreRequest {
-  id: string;
-  title: string;
-  status: string;
-  items: any[];
+  openModal: (modalId: string) => void;
+  closeModal: () => void;
 }
 
 export const useStore = create<AppState>()(
   devtools(
     persist(
-      immer((set) => ({
-        // Cart
+      immer((set, get) => ({
+        // Cart state
         cart: new Map(),
+        
         addToCart: (productId, item) =>
           set((state) => {
             state.cart.set(productId, item);
           }),
+        
+        updateCartItem: (productId, updates) =>
+          set((state) => {
+            const existingItem = state.cart.get(productId);
+            if (existingItem) {
+              state.cart.set(productId, { ...existingItem, ...updates });
+            }
+          }),
+        
         removeFromCart: (productId) =>
           set((state) => {
             state.cart.delete(productId);
           }),
+        
         clearCart: () =>
           set((state) => {
             state.cart.clear();
           }),
         
-        // UI
+        // UI state
         isLoading: false,
         error: null,
+        activeModal: null,
+        
+        // UI actions
         setLoading: (loading) =>
           set((state) => {
             state.isLoading = loading;
           }),
+        
         setError: (error) =>
           set((state) => {
             state.error = error;
           }),
         
-        // Products
-        products: [],
-        setProducts: (products) =>
+        openModal: (modalId) =>
           set((state) => {
-            state.products = products;
+            state.activeModal = modalId;
           }),
         
-        // Orders
-        orders: [],
-        setOrders: (orders) =>
+        closeModal: () =>
           set((state) => {
-            state.orders = orders;
-          }),
-        addOrder: (order) =>
-          set((state) => {
-            state.orders.push(order);
-          }),
-        updateOrder: (orderId, updates) =>
-          set((state) => {
-            const index = state.orders.findIndex((o: StoreOrder) => o.id === orderId);
-            if (index !== -1) {
-              Object.assign(state.orders[index], updates);
-            }
-          }),
-        
-        // Requests
-        requests: [],
-        setRequests: (requests) =>
-          set((state) => {
-            state.requests = requests;
-          }),
-        updateRequest: (requestId, updates) =>
-          set((state) => {
-            const index = state.requests.findIndex((r: StoreRequest) => r.id === requestId);
-            if (index !== -1) {
-              Object.assign(state.requests[index], updates);
-            }
+            state.activeModal = null;
           }),
       })),
       {
         name: 'procurechef-storage',
-        partialize: (state) => ({ cart: state.cart }), // Only persist cart
+        partialize: (state) => ({ 
+          cart: Array.from(state.cart.entries()) // Convert Map to Array for persistence
+        }),
+        onRehydrateStorage: () => (state) => {
+          // Convert Array back to Map after rehydration
+          if (state && Array.isArray(state.cart)) {
+            state.cart = new Map(state.cart as [string, CartItem][]);
+          }
+        },
       }
-    )
+    ),
+    { name: 'procurechef-store' }
   )
 );
 
-// Selectors for computed values
+// Computed selectors
 export const useCartTotal = () => {
   const cart = useStore((state) => state.cart);
   
-  const totalItems = Array.from(cart.values()).reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
+  const cartItems = Array.from(cart.values());
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   
-  const totalPrice = Array.from(cart.values()).reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  
-  return { totalItems, totalPrice };
+  return { totalItems, totalPrice, itemCount: cart.size };
 };
 
-// Async actions
-export const actions = {
-  async loadProducts() {
-    const { setLoading, setError, setProducts } = useStore.getState();
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const serviceProducts = await productsService.getAll();
-      // Convert service products to store products
-      const storeProducts: StoreProduct[] = serviceProducts.map(p => ({
-        id: p.id,
-        name: p.name,
-        category: p.category,
-        price: 10, // Default price since service Product doesn't have price
-        stock: 0   // Default stock since service Product doesn't have stock
-      }));
-      setProducts(storeProducts);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load products');
-    } finally {
-      setLoading(false);
-    }
-  },
-  
-  async createOrder(orderData: any) {
-    const { setLoading, setError, addOrder, clearCart } = useStore.getState();
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const serviceOrder = await ordersService.create({
-        ...orderData,
-        items: [] // Ensure items array exists
-      });
-      
-      if (serviceOrder) {
-        // Convert service order to store order
-        const storeOrder: StoreOrder = {
-          id: serviceOrder.id,
-          number: serviceOrder.number,
-          status: serviceOrder.status,
-          total: serviceOrder.total,
-          items: serviceOrder.items || []
-        };
-        addOrder(storeOrder);
-        clearCart();
-        return storeOrder;
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to create order');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }
+export const useCartItems = () => {
+  const cart = useStore((state) => state.cart);
+  return Array.from(cart.entries()).map(([id, item]) => ({ id, ...item }));
 };
 
-// React hooks for common patterns
-export const useAsyncAction = <T extends any[], R>(
-  action: (...args: T) => Promise<R>
-) => {
-  const setLoading = useStore((state) => state.setLoading);
-  const setError = useStore((state) => state.setError);
+// UI helpers
+export const useModal = (modalId: string) => {
+  const activeModal = useStore((state) => state.activeModal);
+  const openModal = useStore((state) => state.openModal);
+  const closeModal = useStore((state) => state.closeModal);
   
-  return async (...args: T): Promise<R | undefined> => {
-    try {
-      setLoading(true);
-      setError(null);
-      return await action(...args);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+  return {
+    isOpen: activeModal === modalId,
+    open: () => openModal(modalId),
+    close: closeModal,
   };
 };
