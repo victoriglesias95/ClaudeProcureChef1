@@ -1,4 +1,4 @@
-// src/pages/Inventory.tsx - Simplified version
+// src/pages/Inventory.tsx - Fixed version
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -6,7 +6,9 @@ import MainLayout from '@/components/layout/MainLayout';
 import Button from '@/components/ui/Button';
 import { FormModal, FormInput } from '@/components/ui/FormModal';
 import { useStore, useCartTotal } from '@/store/useStore';
-import { procurementService } from '@/services/unified-data-services';
+import { getInventoryItems } from '@/services/products';
+import { createRequest } from '@/services/requests';
+import { useAuth } from '@/hooks/useAuth';
 
 // Simple product grid component
 const ProductGrid: React.FC<{
@@ -57,6 +59,7 @@ const requestSchema = z.object({
 });
 
 const Inventory = () => {
+  const { user } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -74,7 +77,7 @@ const Inventory = () => {
   
   const loadProducts = async () => {
     try {
-      const data = await procurementService.getProductsWithInventory();
+      const data = await getInventoryItems();
       setProducts(data);
     } catch (error) {
       toast.error('Failed to load products');
@@ -91,7 +94,7 @@ const Inventory = () => {
   // Get unique categories
   const categories = ['all', ...new Set(products.map(p => p.category))];
   
-  // Handle add to cart
+  // Handle add to cart - FIXED: Added unit property
   const handleAddToCart = (product: any) => {
     const currentItem = cart.get(product.id);
     const newQuantity = (currentItem?.quantity || 0) + 1;
@@ -100,6 +103,7 @@ const Inventory = () => {
       quantity: newQuantity,
       price: product.price || 10, // Default price
       name: product.name,
+      unit: product.default_unit, // FIXED: Added missing unit
       currentStock: product.current_stock,
       stockLevel: product.stock_level
     });
@@ -109,30 +113,33 @@ const Inventory = () => {
   
   // Handle request submission
   const handleSubmitRequest = async (data: z.infer<typeof requestSchema>) => {
+    if (!user) {
+      toast.error('You must be logged in to create a request');
+      return;
+    }
+
     try {
       const requestItems = Array.from(cart.entries()).map(([productId, item]) => ({
         product_id: productId,
         product_name: item.name,
         quantity: item.quantity,
-        unit: 'unit',
+        unit: item.unit,
         price_per_unit: item.price
       }));
       
-      // Create request with proper type - include total_amount
-      const requestData = {
+      // Create request with proper type
+      await createRequest({
         title: data.title,
-        created_by: 'current-user-id', // Get from auth
-        status: 'submitted' as const,
+        created_by: user.id,
         priority: data.priority,
         needed_by: data.neededBy,
         notes: data.notes,
-        total_amount: totalPrice // Add this field to match Request type
-      };
-      
-      await procurementService.createRequestWithItems(
-        requestData,
-        requestItems
-      );
+        total_amount: totalPrice,
+        items: requestItems.map((item, index) => ({
+          id: `item_${Date.now()}_${index}`,
+          ...item
+        }))
+      });
       
       toast.success('Request submitted successfully');
       clearCart();
@@ -249,7 +256,7 @@ const Inventory = () => {
                   {Array.from(cart.entries()).map(([id, item]) => (
                     <div key={id} className="flex justify-between">
                       <span>{item.name}</span>
-                      <span>{item.quantity} units</span>
+                      <span>{item.quantity} {item.unit}</span>
                     </div>
                   ))}
                 </div>
