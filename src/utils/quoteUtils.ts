@@ -1,4 +1,4 @@
-import { SupplierQuote, QuoteItem } from '../types/quote';
+import { SupplierQuote } from '../types/quote';
 
 export const isQuoteValid = (quote: SupplierQuote): boolean => {
   if (!quote.expiry_date) return false;

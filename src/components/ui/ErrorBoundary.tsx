@@ -1,5 +1,5 @@
 // src/components/ui/ErrorBoundary.tsx - Enhanced error handling
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import Button from './Button';
 
 interface Props {

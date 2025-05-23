@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
-import StatusBadge from '@/components/ui/StatusBadge';
 import { supabase } from '@/services/supabase';
 
 interface Supplier {

@@ -1,6 +1,6 @@
 // src/services/orders.ts
 import { supabase } from './supabase';
-import { Order, OrderItem } from '../types/quote';
+import { Order } from '../types/quote';
 
 /**
  * Get all orders

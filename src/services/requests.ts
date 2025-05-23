@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Request, RequestItem, RequestStatus } from '../types/request';
+import { Request, RequestStatus } from '../types/request';
 
 // Create a new request
 export async function createRequest(requestData: Omit<Request, 'id' | 'created_at' | 'status'>): Promise<Request> {

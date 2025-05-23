@@ -18,6 +18,10 @@ import NotFound from './pages/NotFound';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import Admin from './pages/Admin';
 import { useEffect } from 'react';
+import { measurePageLoad } from './utils/performance';
+
+
+measurePageLoad();
 
 // Enhanced loading screen component
 const LoadingScreen = () => {

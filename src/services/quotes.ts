@@ -1,6 +1,6 @@
 // src/services/quotes.ts (Refactored - Focus only on quote operations)
 import { supabase } from './supabase';
-import { SupplierQuote, QuoteStatus, QuoteItem } from '../types/quote';
+import { SupplierQuote, QuoteStatus } from '../types/quote';
 
 /**
  * Get all quotes

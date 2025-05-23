@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import StatusBadge from '../components/ui/StatusBadge';
 import { getRequests } from '../services/requests';
 import { getQuoteComparisons } from '../services/comparisons';
 import { getOrders } from '../services/orders';
@@ -41,7 +40,6 @@ const Dashboard = () => {
   
   // Calculate dashboard metrics
   const pendingRequests = requests.filter(r => r.status === 'submitted').length;
-  const approvedRequests = requests.filter(r => r.status === 'approved').length;
   const activeQuotes = quoteComparisons.filter(q => q.status === 'open').length;
   const recentOrders = orders.slice(0, 3);
   

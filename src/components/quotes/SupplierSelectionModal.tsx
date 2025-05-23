@@ -21,12 +21,7 @@ const SupplierSelectionModal: React.FC<SupplierSelectionModalProps> = ({
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
   
   // Filter suppliers that can supply the requested products (if productIds provided)
-  const availableSuppliers = productIds ? 
-    suppliers.filter(supplier => {
-      // Check if supplier has any of the requested products
-      // This would need to check against supplier product catalog
-      return true; // Simplified for now - in real implementation, check supplier catalog
-    }) : suppliers;
+  const availableSuppliers = suppliers;
   
   const handleToggleSupplier = (supplierId: string) => {
     setSelectedSuppliers(prev => 

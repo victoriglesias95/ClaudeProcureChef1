@@ -1,7 +1,3 @@
-// Types for procurement system with ERP integration support
-
-import { RequestItem, RequestPriority, RequestStatus } from './request';
-
 // Quote status types
 export type QuoteStatus = 'draft' | 'sent' | 'received' | 'approved' | 'rejected' | 'processed';
 

@@ -14,7 +14,7 @@ interface SetupResult {
  */
 async function checkTable(tableName: string): Promise<{ exists: boolean; error?: string }> {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from(tableName)
       .select('*', { count: 'exact', head: true });
     
@@ -278,7 +278,7 @@ export async function setupDatabase(): Promise<SetupResult> {
     console.log('🔍 Starting database setup verification...');
     
     // Step 1: Verify database connection
-    const { data, error: connectionError } = await supabase
+    const { error: connectionError } = await supabase
       .from('users')
       .select('count(*)', { count: 'exact', head: true });
     

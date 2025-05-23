@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
@@ -43,7 +43,7 @@ const Requests = () => {
   
   const handleCreateQuote = async (requestId: string) => {
     try {
-      const quoteComparison = await createQuoteComparisonFromRequest(requestId);
+      await createQuoteComparisonFromRequest(requestId);
       toast.success('Quote comparison created successfully');
       navigate(`/quote-comparison?requestIds=${requestId}`);
     } catch (error) {

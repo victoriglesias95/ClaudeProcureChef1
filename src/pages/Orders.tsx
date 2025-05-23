@@ -1,5 +1,5 @@
 // src/pages/Orders.tsx - WITH RECEIVING INTEGRATION
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import MainLayout from '../components/layout/MainLayout';

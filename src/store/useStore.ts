@@ -35,7 +35,7 @@ interface AppState {
 export const useStore = create<AppState>()(
   devtools(
     persist(
-      immer((set, get) => ({
+      immer((set) => ({
         // Cart state
         cart: new Map(),
         

@@ -6,7 +6,6 @@ import Button from '../ui/Button';
 import StatusBadge from '../ui/StatusBadge';
 import { supabase } from '@/services/supabase';
 import { Request } from '@/types/request';
-import { Supplier } from '@/types/quote';
 
 interface QuoteRequestPreviewProps {
   isOpen: boolean;

@@ -154,7 +154,7 @@ const handleProductSubmit = async (e: React.FormEvent) => {
   
     try {
     // First, check if the table exists by attempting to count records
-    const { count, error: countError } = await supabase
+    const { error: countError } = await supabase
       .from('categories')
       .select('*', { count: 'exact', head: true });
       

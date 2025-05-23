@@ -11,8 +11,8 @@ import './styles/mobile.css';
 Sentry.init({
   dsn: "https://1f931a4b6d1703019e138ec3778ee390@o4509372135505920.ingest.de.sentry.io/4509372137341008", 
   integrations: [
-    new Sentry.BrowserTracing(),
-    new Sentry.Replay({
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
       maskAllText: false,
       blockAllMedia: false,
     }),
