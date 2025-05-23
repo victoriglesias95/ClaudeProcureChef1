@@ -1,3 +1,4 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -14,6 +15,10 @@ export default defineConfig({
       gzipSize: true, // Show gzip sizes
       brotliSize: true, // Show brotli sizes
       template: 'treemap' // Options: 'treemap', 'sunburst', 'network'
+    }),
+    sentryVitePlugin({
+      org: "tafamus-sl",
+      project: "javascript-react"
     })
   ],
   
