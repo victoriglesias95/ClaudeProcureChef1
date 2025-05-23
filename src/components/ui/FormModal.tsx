@@ -71,6 +71,7 @@ export function FormModal<T extends FieldValues>({
 }
 
 // Form field components
+// src/components/ui/FormModal.tsx - Update the FormInput component
 export const FormInput: React.FC<{
   label: string;
   name: string;
@@ -79,7 +80,16 @@ export const FormInput: React.FC<{
   type?: string;
   placeholder?: string;
   required?: boolean;
-}> = ({ label, name, register, error, type = 'text', placeholder, required }) => (
+} & React.InputHTMLAttributes<HTMLInputElement>> = ({ 
+  label, 
+  name, 
+  register, 
+  error, 
+  type = 'text', 
+  placeholder, 
+  required,
+  ...inputProps // Capture all other HTML input attributes
+}) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1">
       {label} {required && <span className="text-red-500">*</span>}
@@ -89,6 +99,7 @@ export const FormInput: React.FC<{
       type={type}
       placeholder={placeholder}
       className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+      {...inputProps} // Spread additional props onto the input
     />
     {error && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
   </div>

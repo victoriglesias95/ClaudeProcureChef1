@@ -1,4 +1,4 @@
-// src/store/useStore.ts - Clean architecture: Cart + UI state only
+// src/store/useStore.ts - Fixed to use Record instead of Map
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -13,8 +13,8 @@ interface CartItem {
 }
 
 interface AppState {
-  // Cart state
-  cart: Map<string, CartItem>;
+  // Cart state - Changed from Map to Record
+  cart: Record<string, CartItem>;
   addToCart: (productId: string, item: CartItem) => void;
   updateCartItem: (productId: string, updates: Partial<CartItem>) => void;
   removeFromCart: (productId: string) => void;
@@ -36,30 +36,29 @@ export const useStore = create<AppState>()(
   devtools(
     persist(
       immer((set) => ({
-        // Cart state
-        cart: new Map(),
+        // Cart state - Initialize as empty object
+        cart: {},
         
         addToCart: (productId, item) =>
           set((state) => {
-            state.cart.set(productId, item);
+            state.cart[productId] = item;
           }),
         
         updateCartItem: (productId, updates) =>
           set((state) => {
-            const existingItem = state.cart.get(productId);
-            if (existingItem) {
-              state.cart.set(productId, { ...existingItem, ...updates });
+            if (state.cart[productId]) {
+              state.cart[productId] = { ...state.cart[productId], ...updates };
             }
           }),
         
         removeFromCart: (productId) =>
           set((state) => {
-            state.cart.delete(productId);
+            delete state.cart[productId];
           }),
         
         clearCart: () =>
           set((state) => {
-            state.cart.clear();
+            state.cart = {};
           }),
         
         // UI state
@@ -90,35 +89,26 @@ export const useStore = create<AppState>()(
       })),
       {
         name: 'procurechef-storage',
-        partialize: (state) => ({ 
-          cart: Array.from(state.cart.entries()) // Convert Map to Array for persistence
-        }),
-        onRehydrateStorage: () => (state) => {
-          // Convert Array back to Map after rehydration
-          if (state && Array.isArray(state.cart)) {
-            state.cart = new Map(state.cart as [string, CartItem][]);
-          }
-        },
       }
     ),
     { name: 'procurechef-store' }
   )
 );
 
-// Computed selectors
+// Computed selectors - Updated to work with Record
 export const useCartTotal = () => {
   const cart = useStore((state) => state.cart);
   
-  const cartItems = Array.from(cart.values());
+  const cartItems = Object.values(cart);
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   
-  return { totalItems, totalPrice, itemCount: cart.size };
+  return { totalItems, totalPrice, itemCount: Object.keys(cart).length };
 };
 
 export const useCartItems = () => {
   const cart = useStore((state) => state.cart);
-  return Array.from(cart.entries()).map(([id, item]) => ({ id, ...item }));
+  return Object.entries(cart).map(([id, item]) => ({ id, ...item }));
 };
 
 // UI helpers

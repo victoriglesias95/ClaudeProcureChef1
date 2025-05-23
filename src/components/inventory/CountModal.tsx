@@ -1,3 +1,4 @@
+// src/components/inventory/CountModal.tsx - Updated version
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -79,7 +80,7 @@ const CountModal: React.FC<CountModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Count Inventory${category ? `: ${category}` : ''}`}
-      maxWidth="lg"
+      maxWidth="xl" // Changed from lg to xl for more width
       footer={
         <div className="flex justify-end space-x-2">
           <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
@@ -99,51 +100,57 @@ const CountModal: React.FC<CountModalProps> = ({
         <p className="text-sm text-gray-600">
           Update the current quantities for each item after your physical count.
         </p>
+        <p className="text-sm text-gray-500 mt-1">
+          Showing {items.length} items
+        </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {items.map(item => (
-          <div key={item.id} className="border rounded-lg p-4">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h4 className="font-medium">{item.name}</h4>
-                <p className="text-sm text-gray-500">Current: {item.currentStock} {item.unit}</p>
-                {item.lastCountedAt && (
-                  <p className="text-xs text-gray-400">
-                    Last count: {new Date(item.lastCountedAt).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => handleDecrement(item.id)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
-              >
-                -
-              </button>
-              
-              <div className="flex-1 mx-4">
-                <input
-                  type="number"
-                  min="0"
-                  value={counts[item.id] || 0}
-                  onChange={(e) => handleCountChange(item.id, e.target.value)}
-                  className="w-full text-center text-lg font-semibold p-2 border border-gray-300 rounded-md"
-                />
-                <p className="text-center text-sm text-gray-500 mt-1">{item.unit}</p>
+      {/* Make the grid scrollable with dynamic height */}
+      <div className="max-h-[60vh] overflow-y-auto pr-2"> {/* 60% of viewport height */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {items.map(item => (
+            <div key={item.id} className="border rounded-lg p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h4 className="font-medium">{item.name}</h4>
+                  <p className="text-sm text-gray-500">Current: {item.currentStock} {item.unit}</p>
+                  {item.lastCountedAt && (
+                    <p className="text-xs text-gray-400">
+                      Last count: {new Date(item.lastCountedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
               </div>
               
-              <button
-                onClick={() => handleIncrement(item.id)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-primary hover:bg-primary-dark text-white"
-              >
-                +
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => handleDecrement(item.id)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                >
+                  -
+                </button>
+                
+                <div className="flex-1 mx-4">
+                  <input
+                    type="number"
+                    min="0"
+                    value={counts[item.id] || 0}
+                    onChange={(e) => handleCountChange(item.id, e.target.value)}
+                    className="w-full text-center text-lg font-semibold p-2 border border-gray-300 rounded-md"
+                  />
+                  <p className="text-center text-sm text-gray-500 mt-1">{item.unit}</p>
+                </div>
+                
+                <button
+                  onClick={() => handleIncrement(item.id)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-primary hover:bg-primary-dark text-white transition-colors"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </Modal>
   );
