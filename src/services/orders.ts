@@ -214,7 +214,7 @@ export async function receiveOrder(
     
     if (orderError) throw orderError;
     
-    // 2. Update inventory quantities
+    // 2. Update inventory quantities and create receiving records
     for (const [itemId, quantity] of Object.entries(receivedItems)) {
       // Get order item details
       const { data: orderItem, error: itemError } = await supabase
@@ -249,7 +249,44 @@ export async function receiveOrder(
         .eq('product_id', orderItem.product_id);
       
       if (updateError) throw updateError;
+      
+      // If there are notes for this item, store them in order_items
+      if (notes[itemId]) {
+        const { error: notesError } = await supabase
+          .from('order_items')
+          .update({
+            receiving_notes: notes[itemId],
+            received_quantity: quantity,
+            received_at: new Date().toISOString()
+          })
+          .eq('id', itemId);
+        
+        if (notesError) {
+          console.warn(`Failed to update notes for item ${itemId}:`, notesError);
+          // Don't throw, just log the warning as notes are optional
+        }
+      }
     }
+    
+    // 3. Create a receiving record if you have a receiving_logs table
+    // This is optional but good for audit trail
+    /*
+    const receivingLog = {
+      order_id: orderId,
+      received_at: new Date().toISOString(),
+      received_by: 'current_user', // You'd get this from auth context
+      items_received: receivedItems,
+      notes: Object.keys(notes).length > 0 ? JSON.stringify(notes) : null
+    };
+    
+    const { error: logError } = await supabase
+      .from('receiving_logs')
+      .insert(receivingLog);
+    
+    if (logError) {
+      console.warn('Failed to create receiving log:', logError);
+    }
+    */
     
     return true;
   } catch (error) {

@@ -93,10 +93,10 @@ const Quotes = () => {
     navigate(`/quotes/${quoteId}`);
   };
 
-  // Calculate totals
-  const totalQuotes = comparisons.reduce((sum, comp) => sum + comp.supplier_quotes.length, 0);
+  // Calculate statistics
   const pendingRequests = quoteRequests.filter(req => req.status === 'pending' || req.status === 'sent').length;
   const receivedQuotes = quoteRequests.filter(req => req.status === 'received').length;
+  // Remove unused totalQuotes variable to fix TypeScript error
 
   return (
     <MainLayout>
