@@ -39,12 +39,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">{user?.name || user?.email}</span>
-            <button 
-              onClick={handleLogout}
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              Logout
-            </button>
+              <button 
+                onClick={handleLogout}
+                className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1 rounded hover:bg-gray-100 transition-colors"
+              >
+                  Logout
+              </button>
           </div>
         </div>
       </header>

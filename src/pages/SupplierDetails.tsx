@@ -31,7 +31,6 @@ interface SupplierProduct {
   supplier_product_code?: string;
   available: boolean;
   minimum_order_quantity?: number;
-  last_price_update?: string;
   lead_time_days?: number;
 }
 
@@ -114,7 +113,6 @@ const SupplierDetails: React.FC = () => {
           supplier_product_code: sp.supplier_product_code,
           available: sp.available,
           minimum_order_quantity: sp.minimum_order_quantity,
-          last_price_update: sp.last_price_update,
           lead_time_days: sp.lead_time_days
         };
       }) || [];
@@ -169,7 +167,6 @@ const SupplierDetails: React.FC = () => {
           available: true,
           minimum_order_quantity: minOrderQty ? parseInt(minOrderQty) : null,
           lead_time_days: leadTime ? parseInt(leadTime) : null,
-          last_price_update: new Date().toISOString()
         })
         .select();
       
@@ -199,7 +196,6 @@ const SupplierDetails: React.FC = () => {
           supplier_product_code: supplierCode || selectedProduct.supplier_product_code,
           minimum_order_quantity: minOrderQty ? parseInt(minOrderQty) : selectedProduct.minimum_order_quantity,
           lead_time_days: leadTime ? parseInt(leadTime) : selectedProduct.lead_time_days,
-          last_price_update: new Date().toISOString()
         })
         .eq('supplier_id', id)
         .eq('product_id', selectedProduct.product_id);
@@ -452,11 +448,7 @@ const SupplierDetails: React.FC = () => {
                                 <span>{product.lead_time_days} days lead time</span>
                               )}
                             </div>
-                            {product.last_price_update && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Last updated: {new Date(product.last_price_update).toLocaleDateString()}
-                              </p>
-                            )}
+                           
                           </div>
                           <div className="flex items-center space-x-2">
                             <Button

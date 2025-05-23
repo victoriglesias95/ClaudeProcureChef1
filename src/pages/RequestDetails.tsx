@@ -5,19 +5,20 @@ import MainLayout from '../components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import StatusBadge from '../components/ui/StatusBadge';
-import SupplierSelectionModal from '../components/quotes/SupplierSelectionModal';
+import QuoteTracker from '../components/quotes/QuoteTracker';
 import { getRequestById, approveRequest, rejectRequest } from '../services/requests';
-import { createQuoteRequestsForSuppliers } from '../services/quote-requests';
 import { getSuppliers } from '../services/suppliers';
 import { Request } from '../types/request';
 import { Supplier } from '../types/quote';
+import { useAuth } from '../hooks/useAuth';
 
 const RequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [request, setRequest] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showSupplierSelection, setShowSupplierSelection] = useState(false);
+  const [showQuoteTracker, setShowQuoteTracker] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   useEffect(() => {
@@ -49,23 +50,6 @@ const RequestDetails = () => {
 
   const formatCurrency = (amount: number) => {
     return `R$${amount.toFixed(2)}`;
-  };
-
-  const handleCreateQuote = () => {
-    setShowSupplierSelection(true);
-  };
-
-  const handleSupplierSelection = async (selectedSupplierIds: string[]) => {
-    if (!request) return;
-    
-    try {
-      await createQuoteRequestsForSuppliers(request.id, selectedSupplierIds);
-      toast.success(`Quote requests sent to ${selectedSupplierIds.length} suppliers`);
-      navigate('/quotes?tab=requests');
-    } catch (error) {
-      console.error('Failed to create quote requests:', error);
-      toast.error('Failed to send quote requests');
-    }
   };
 
   const handleApprove = async () => {
@@ -135,6 +119,10 @@ const RequestDetails = () => {
     );
   }
 
+  // Check if user can approve/reject
+  const canApprove = user?.role === 'admin' || user?.role === 'purchasing';
+  const showActionButtons = canApprove && request.status === 'submitted';
+
   return (
     <MainLayout>
       {/* Header */}
@@ -153,7 +141,7 @@ const RequestDetails = () => {
           <p className="text-gray-600">Request #{request.id}</p>
         </div>
         <div className="flex items-center space-x-2">
-          {request.status === 'submitted' && (
+          {showActionButtons && (
             <>
               <Button variant="outline" onClick={handleReject}>
                 Reject
@@ -164,8 +152,8 @@ const RequestDetails = () => {
             </>
           )}
           {request.status === 'approved' && (
-            <Button variant="primary" onClick={handleCreateQuote}>
-              Generate Quote
+            <Button variant="primary" onClick={() => setShowQuoteTracker(true)}>
+              Get Supplier Quotes
             </Button>
           )}
           <Button variant="outline" onClick={handleEdit}>
@@ -222,7 +210,7 @@ const RequestDetails = () => {
             {request.notes && (
               <div className="md:col-span-2">
                 <p className="text-sm text-gray-500">Notes</p>
-                <p className="font-medium">{request.notes}</p>
+                <p className="font-medium whitespace-pre-wrap">{request.notes}</p>
               </div>
             )}
           </div>
@@ -285,13 +273,14 @@ const RequestDetails = () => {
         </CardContent>
       </Card>
 
-      {/* Supplier Selection Modal */}
-      <SupplierSelectionModal
-        isOpen={showSupplierSelection}
-        onClose={() => setShowSupplierSelection(false)}
-        suppliers={suppliers}
-        onConfirm={handleSupplierSelection}
-        productIds={request?.items.map(item => item.product_id)}
+      {/* Quote Tracker Modal */}
+      <QuoteTracker
+        isOpen={showQuoteTracker}
+        onClose={() => setShowQuoteTracker(false)}
+        request={request}
+        onComplete={() => {
+          navigate(`/quote-comparison?requestIds=${request.id}`);
+        }}
       />
     </MainLayout>
   );
